@@ -872,7 +872,7 @@ function renderTimeline(){
       const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
       const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
 
-      html += `<div style="position:absolute;"><span style="font-size:9px;color:red;">내용</span></div>`;
+      html += `<div style="position:absolute; left:${left}px; width:${width}px; background-color:${barColor}; height:12px; border-radius:6px; top:2px; opacity:0.85;" title="${u.title || '편집 스케줄'}"></div>`;
 
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
         const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
