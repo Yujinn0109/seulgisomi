@@ -69,7 +69,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--color-background-terti
 .upload-table tr:last-child td{border-bottom:none}
 .upload-table tr:hover td{background:var(--color-background-secondary);cursor:pointer}
 .status-badge{font-size:11px;padding:3px 8px;border-radius:var(--border-radius-md);font-weight:500}
-.status-done{background:#EAF3DE;color:#27500A}.status-edit{background:#E6F1FB;color:#0C447C}.status-plan{background:#EEEDFE;color:#3C3489}.status-review{background:#FAEEDA;color:#633806}
+.status-done{background:#EAF3DE;color:#27500A}.status-edit{background:#E6F1FB;color:#0C447C}.status-plan{background:#EEEDFE;color:#3C3489}.status-review{background:#FAEEDA;color:#633806}.status-shoot{background:#FEF0E6;color:#7A3800}
 /* Resource */
 .resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .resource-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
@@ -290,13 +290,17 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="체리시" style="width:auto;margin:0"> 체리시</label>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="메이" style="width:auto;margin:0"> 메이</label>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="신규입사자A" style="width:auto;margin:0"> 신규입사자A</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="메이브" style="width:auto;margin:0"> 메이브</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="외주" style="width:auto;margin:0"> 외주</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="미정" style="width:auto;margin:0"> 미정</label>
     </div>
     <label>예정 업로드일</label><input type="date" id="up-date">
     <label>상태</label>
     <select id="up-status">
-      <option value="plan">기획</option><option value="edit">편집 중</option>
-      <option value="review">검수 중</option><option value="done">업로드 완료</option>
+      <option value="plan">기획</option>
+      <option value="shoot">촬영 완료</option>
+      <option value="edit">편집 중</option>
+      <option value="review">검수 중</option>
+      <option value="done">업로드 완료</option>
     </select>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="up-delete-btn" style="display:none;margin-right:auto" onclick="deleteUploadFromModal()">삭제</button>
@@ -514,10 +518,11 @@ const MEMBERS = {
 };
 const MEMBER_ORDER = ['jini','eden','jamie','cherish','may','new','maeve'];
 const statusMap = {
-  done:  {label:'업로드 완료',cls:'status-done'},
-  review:{label:'검수 중',    cls:'status-review'},
-  edit:  {label:'편집 중',    cls:'status-edit'},
-  plan:  {label:'기획',       cls:'status-plan'}
+  done:   {label:'업로드 완료', cls:'status-done'},
+  review: {label:'검수 중',     cls:'status-review'},
+  edit:   {label:'편집 중',     cls:'status-edit'},
+  plan:   {label:'기획',        cls:'status-plan'},
+  shoot:  {label:'촬영 완료',   cls:'status-shoot'}
 };
 
 let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[];
