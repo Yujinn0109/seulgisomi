@@ -315,18 +315,71 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <select id="up-channel"><option value="seulgi">슬기</option><option value="somi">소미</option></select>
     <label>영상 제목</label><input type="text" id="up-title" placeholder="제목 입력">
     <label>담당자 <span style="font-weight:400;color:#999">(선택하면 편집 기간 입력 가능)</span></label>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px" id="up-member-list">
-      ${['지니','이든','제이미','체리시','메이','신규입사자A','외주','미정'].map(name=>`
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px">
       <div style="display:flex;align-items:center;gap:8px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px">
-          <input type="checkbox" class="up-member-cb" value="${name}" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> ${name}
-        </label>
-        <div id="dates-${name}" style="display:none;flex:1;display:none;gap:6px;align-items:center">
-          <input type="date" id="es-${name}" placeholder="시작일" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="지니" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 지니</label>
+        <div id="dates-지니" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-지니" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
           <span style="font-size:11px;color:#888">~</span>
-          <input type="date" id="ee-${name}" placeholder="마감일" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <input type="date" id="ee-지니" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
         </div>
-      </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="이든" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 이든</label>
+        <div id="dates-이든" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-이든" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-이든" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="제이미" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 제이미</label>
+        <div id="dates-제이미" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-제이미" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-제이미" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="체리시" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 체리시</label>
+        <div id="dates-체리시" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-체리시" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-체리시" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="메이" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 메이</label>
+        <div id="dates-메이" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-메이" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-메이" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="신규입사자A" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 신규입사자A</label>
+        <div id="dates-신규입사자A" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-신규입사자A" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-신규입사자A" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="외주" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 외주</label>
+        <div id="dates-외주" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-외주" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-외주" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="미정" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 미정</label>
+        <div id="dates-미정" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-미정" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-미정" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
     </div>
     <label>예정 업로드일</label><input type="date" id="up-date">
     <label>상태</label>
@@ -338,8 +391,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="done">업로드 완료</option>
     </select>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;font-weight:400">
-      <input type="checkbox" id="up-savebon" style="width:auto;margin:0">
-      ⭐ 세이브본 필요
+      <input type="checkbox" id="up-savebon" style="width:auto;margin:0"> ⭐ 세이브본 필요
     </label>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="up-delete-btn" style="display:none;margin-right:auto" onclick="deleteUploadFromModal()">삭제</button>
