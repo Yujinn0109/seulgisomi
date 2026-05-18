@@ -478,7 +478,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 // ════════════════════════════════════════════
 const SUPABASE_URL = 'https://rteqfowdlldleivcxiui.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZXFmb3dkbGxkbGVpdmN4aXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTY4NTAsImV4cCI6MjA5NDMzMjg1MH0.sOzPn2OY7fxs7ZQ-zBvN7595W8Vu5W_W2xUhU6qsbRY';
-const  = 'AIzaSyAtpiK3RtO56ebOTPpvLN_RduLL4RdG7qQ';
+const GCAL_API_KEY = 'AIzaSyAtpiK3RtO56ebOTPpvLN_RduLL4RdG7qQ';
 const GCAL_IDS = [
   'ep.zinny@gmail.com',
   '5b4e1758e3f442eb16aa8a8c4cceb0c70622185b1421e7eb138fcc121bd307da@group.calendar.google.com',
@@ -569,7 +569,7 @@ function subscribeRealtime(){
 
 // ── 구글 캘린더 (홈 내일 일정 백그라운드 동기화 전용) ──
 async function syncGoogleCalendar(){
-  if(!GCAL_API_KEY) return;
+  if(!GCAL_API_KEY||GCAL_API_KEY==='YOUR_GOOGLE_API_KEY_HERE') return;
   try{
     const now=new Date();
     // 한국시간(UTC+9) 기준으로 이전달 1일 ~ 3달 후 말일
