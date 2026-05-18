@@ -872,9 +872,7 @@ function renderTimeline(){
       const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
       const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
 
-      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${u.title}${personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})':''}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
-        <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
-      </div>`;
+      html += `<div style="position:absolute;"><span style="font-size:9px;color:red;">내용</span></div>`;
 
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
         const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
