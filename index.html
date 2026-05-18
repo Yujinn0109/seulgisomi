@@ -309,27 +309,26 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <!-- 업로드 추가/수정 -->
 <div id="modal-upload" class="modal-overlay" style="display:none" onclick="closeModal('modal-upload',event)">
-  <div class="modal"><h3 id="up-modal-title">업로드 일정 추가</h3>
+  <div class="modal" style="width:440px"><h3 id="up-modal-title">업로드 일정 추가</h3>
     <input type="hidden" id="up-edit-id">
     <label>채널</label>
     <select id="up-channel"><option value="seulgi">슬기</option><option value="somi">소미</option></select>
     <label>영상 제목</label><input type="text" id="up-title" placeholder="제목 입력">
-    <label>담당자 <span style="font-weight:400;color:#999">(복수 선택 가능)</span></label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="지니" style="width:auto;margin:0"> 지니</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="이든" style="width:auto;margin:0"> 이든</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="제이미" style="width:auto;margin:0"> 제이미</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="체리시" style="width:auto;margin:0"> 체리시</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="메이" style="width:auto;margin:0"> 메이</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="신규입사자A" style="width:auto;margin:0"> 신규입사자A</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="외주" style="width:auto;margin:0"> 외주</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="미정" style="width:auto;margin:0"> 미정</label>
+    <label>담당자 <span style="font-weight:400;color:#999">(선택하면 편집 기간 입력 가능)</span></label>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px" id="up-member-list">
+      ${['지니','이든','제이미','체리시','메이','신규입사자A','외주','미정'].map(name=>`
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px">
+          <input type="checkbox" class="up-member-cb" value="${name}" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> ${name}
+        </label>
+        <div id="dates-${name}" style="display:none;flex:1;display:none;gap:6px;align-items:center">
+          <input type="date" id="es-${name}" placeholder="시작일" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-${name}" placeholder="마감일" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>`).join('')}
     </div>
     <label>예정 업로드일</label><input type="date" id="up-date">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>편집 시작일 <span style="font-weight:400;color:#999">(선택)</span></label><input type="date" id="up-edit-start"></div>
-      <div><label>편집 마감일 <span style="font-weight:400;color:#999">(선택)</span></label><input type="date" id="up-edit-end"></div>
-    </div>
     <label>상태</label>
     <select id="up-status">
       <option value="plan">기획</option>
@@ -340,7 +339,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     </select>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;font-weight:400">
       <input type="checkbox" id="up-savebon" style="width:auto;margin:0">
-      ⭐ 세이브본 필요 (미리 저장본 제작)
+      ⭐ 세이브본 필요
     </label>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="up-delete-btn" style="display:none;margin-right:auto" onclick="deleteUploadFromModal()">삭제</button>
@@ -566,7 +565,7 @@ const statusMap = {
 };
 
 let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[];
-let memberExtraTasks={}, memberStatuses={};
+let memberExtraTasks={}, memberStatuses={}, memberSchedulesData={};
 let gcalEvents=[];
 let curYear=new Date().getFullYear(), curMonth=new Date().getMonth();
 let uploadFilter='all', curNoticeBoard='episode';
@@ -586,7 +585,7 @@ function execFontSize(s){document.execCommand('fontSize',false,s);document.getEl
 async function loadData(){
   setLoading(true);
   try{
-    const [evR,upR,noR,reR,moR,hwR,tkR,stR]=await Promise.all([
+    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR]=await Promise.all([
       db.from('events').select('*').order('date'),
       db.from('uploads').select('*').order('date'),
       db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
@@ -594,10 +593,17 @@ async function loadData(){
       db.from('resource_memos').select('*').order('created_at'),
       db.from('handovers').select('*').order('created_at',{ascending:false}),
       db.from('member_tasks').select('*').order('created_at'),
-      db.from('member_statuses').select('*')
+      db.from('member_statuses').select('*'),
+      db.from('upload_member_schedules').select('*')
     ]);
     events=evR.data||[]; uploadData=upR.data||[]; noticeData=noR.data||[];
     resourceData=reR.data||[]; memoData=moR.data||[]; handoverData=hwR.data||[];
+    // 업로드별 멤버 스케줄 맵핑
+    memberSchedulesData={};
+    (msR.data||[]).forEach(s=>{
+      if(!memberSchedulesData[s.upload_id]) memberSchedulesData[s.upload_id]=[];
+      memberSchedulesData[s.upload_id].push(s);
+    });
     memberExtraTasks={};
     (tkR.data||[]).forEach(t=>{if(!memberExtraTasks[t.member_id])memberExtraTasks[t.member_id]=[];memberExtraTasks[t.member_id].push(t);});
     memberStatuses={};
@@ -792,15 +798,16 @@ function renderTimeline(){
       html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;background:${isToday?'#7F77DD10':isWeekend?'var(--color-background-secondary)':'transparent'};border-right:0.5px solid var(--color-border-tertiary)"></div>`;
     }
 
-    // 업무 바 오버레이
+    // 업무 바 오버레이 — 멤버별 개인 스케줄 우선 사용
     tasks.forEach(u=>{
-      if(!u.edit_start&&!u.edit_end&&!u.date) return;
-      const ch=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
       const barColor=u.channel==='seulgi'?'#B45309':'#DB2777';
-      const startStr=u.edit_start||u.date;
-      const endStr=u.edit_end||u.date;
+      // 멤버별 개인 스케줄 확인
+      const memberScheds=memberSchedulesData[u.id]||[];
+      const personalSched=memberScheds.find(s=>s.member_name===name);
+      const startStr=personalSched?.edit_start||u.edit_start||u.date;
+      const endStr=personalSched?.edit_end||u.edit_end||u.date;
+      if(!startStr) return;
 
-      // 이달 범위 내로 클램핑
       const start=new Date(Math.max(new Date(startStr),new Date(`${monthStr}-01`)));
       const end=new Date(Math.min(new Date(endStr),new Date(timelineYear,timelineMonth+1,0)));
       if(start>end) return;
@@ -813,11 +820,10 @@ function renderTimeline(){
       const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
       const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
 
-      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${u.title}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
+      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${u.title}${personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})':''}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
         <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
       </div>`;
 
-      // 업로드일 마커 ▲
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
         const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
         html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700" title="업로드 ${u.date}">▲</div>`;
@@ -1090,20 +1096,34 @@ function openAddEvent(){
   document.getElementById('modal-event').style.display='flex';
 }
 function toggleRepeatUntil(){document.getElementById('ev-repeat-until-wrap').style.display=document.getElementById('ev-repeat').value==='none'?'none':'block';}
+
+function toggleMemberDates(cb){
+  const datesDiv=document.getElementById('dates-'+cb.value);
+  if(datesDiv) datesDiv.style.display=cb.checked?'flex':'none';
+}
+
+const UPLOAD_MEMBERS=['지니','이든','제이미','체리시','메이','신규입사자A','외주','미정'];
+
 function openAddUpload(){
   document.getElementById('up-modal-title').textContent='업로드 일정 추가';
   document.getElementById('up-edit-id').value='';
   document.getElementById('up-channel').value='seulgi';
   document.getElementById('up-title').value='';
-  document.querySelectorAll('.up-member-cb').forEach(cb=>cb.checked=false);
+  document.querySelectorAll('.up-member-cb').forEach(cb=>{
+    cb.checked=false;
+    const d=document.getElementById('dates-'+cb.value);
+    if(d){d.style.display='none';}
+    const es=document.getElementById('es-'+cb.value);
+    const ee=document.getElementById('ee-'+cb.value);
+    if(es)es.value=''; if(ee)ee.value='';
+  });
   document.getElementById('up-date').value='';
-  document.getElementById('up-edit-start').value='';
-  document.getElementById('up-edit-end').value='';
   document.getElementById('up-status').value='plan';
   document.getElementById('up-savebon').checked=false;
   document.getElementById('up-delete-btn').style.display='none';
   document.getElementById('modal-upload').style.display='flex';
 }
+
 function openEditUpload(id){
   const u=uploadData.find(u=>u.id===id);if(!u)return;
   document.getElementById('up-modal-title').textContent='업로드 일정 수정';
@@ -1111,10 +1131,21 @@ function openEditUpload(id){
   document.getElementById('up-channel').value=u.channel;
   document.getElementById('up-title').value=u.title;
   const members=(u.member||'').split(',').map(s=>s.trim());
-  document.querySelectorAll('.up-member-cb').forEach(cb=>cb.checked=members.includes(cb.value));
+  // 기존 멤버 스케줄 불러오기
+  const schedules=memberSchedulesData[id]||[];
+  document.querySelectorAll('.up-member-cb').forEach(cb=>{
+    const checked=members.includes(cb.value);
+    cb.checked=checked;
+    const d=document.getElementById('dates-'+cb.value);
+    if(d) d.style.display=checked?'flex':'none';
+    // 저장된 개인별 편집 기간 복원
+    const sched=schedules.find(s=>s.member_name===cb.value);
+    const es=document.getElementById('es-'+cb.value);
+    const ee=document.getElementById('ee-'+cb.value);
+    if(es) es.value=sched?.edit_start||'';
+    if(ee) ee.value=sched?.edit_end||'';
+  });
   document.getElementById('up-date').value=u.date;
-  document.getElementById('up-edit-start').value=u.edit_start||'';
-  document.getElementById('up-edit-end').value=u.edit_end||'';
   document.getElementById('up-status').value=u.status;
   document.getElementById('up-savebon').checked=!!u.savebon;
   document.getElementById('up-delete-btn').style.display='inline-flex';
@@ -1224,14 +1255,29 @@ async function saveUpload(){
     channel:document.getElementById('up-channel').value,
     title, member:checked.join(', '), date,
     status:document.getElementById('up-status').value,
-    edit_start:document.getElementById('up-edit-start').value||null,
-    edit_end:document.getElementById('up-edit-end').value||null,
     savebon:document.getElementById('up-savebon').checked
   };
-  let error;
-  if(id){({error}=await db.from('uploads').update(payload).eq('id',id));}
-  else{({error}=await db.from('uploads').insert(payload));}
+  let error, uploadId=id;
+  if(id){
+    ({error}=await db.from('uploads').update(payload).eq('id',id));
+  } else {
+    const {data,error:e}=await db.from('uploads').insert(payload).select().single();
+    error=e; if(data) uploadId=data.id;
+  }
   if(error){showToast('저장 실패: '+error.message);return;}
+
+  // 멤버별 편집 기간 저장
+  if(uploadId){
+    await db.from('upload_member_schedules').delete().eq('upload_id',uploadId);
+    const schedRows=checked.map(name=>({
+      upload_id:uploadId,
+      member_name:name,
+      edit_start:document.getElementById('es-'+name)?.value||null,
+      edit_end:document.getElementById('ee-'+name)?.value||null
+    })).filter(r=>r.edit_start||r.edit_end);
+    if(schedRows.length) await db.from('upload_member_schedules').insert(schedRows);
+  }
+
   closeModal('modal-upload');showToast(id?'수정됐어요 ✓':'추가됐어요 ✓');
 }
 async function deleteUploadFromModal(){
