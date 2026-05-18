@@ -572,8 +572,10 @@ async function syncGoogleCalendar(){
   if(!GCAL_API_KEY||GCAL_API_KEY==='AIzaSyAtpiK3RtO56ebOTPpvLN_RduLL4RdG7qQ') return;
   try{
     const now=new Date();
-    const tMin=new Date(now.getFullYear(),now.getMonth()-1,1).toISOString();
-    const tMax=new Date(now.getFullYear(),now.getMonth()+3,0).toISOString();
+    // 한국시간(UTC+9) 기준으로 이전달 1일 ~ 3달 후 말일
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const tMin=new Date(new Date(now.getFullYear(),now.getMonth()-1,1).getTime() - kstOffset).toISOString();
+    const tMax=new Date(new Date(now.getFullYear(),now.getMonth()+3,0,23,59,59).getTime() - kstOffset).toISOString();
     const results=await Promise.all(GCAL_IDS.map(async id=>{
       const [calInfo,evRes]=await Promise.all([
         fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(id)}?key=${GCAL_API_KEY}`).then(r=>r.json()),
