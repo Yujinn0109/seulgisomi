@@ -187,10 +187,27 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <button class="btn btn-primary" onclick="openAddUpload()"><i class="ti ti-plus"></i> 일정 추가</button>
     </div>
   </div>
-  <table class="upload-table">
-    <thead><tr><th>채널</th><th>영상 제목</th><th>담당자</th><th>예정 업로드일</th><th>상태</th><th></th></tr></thead>
-    <tbody id="upload-tbody"></tbody>
-  </table>
+
+  <!-- 업로드 카드 리스트 -->
+  <div id="upload-card-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px"></div>
+
+  <!-- 타임라인 캘린더 -->
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="ti ti-calendar-stats" style="font-size:16px;color:#7F77DD"></i>
+        <span style="font-size:13px;font-weight:500">편집 타임라인</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="changeTimelineMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+        <span id="timeline-month-label" style="font-size:13px;font-weight:500;padding:4px 10px"></span>
+        <button class="btn btn-sm" onclick="changeTimelineMonth(1)"><i class="ti ti-chevron-right"></i></button>
+      </div>
+    </div>
+    <div style="padding:12px 16px;overflow-x:auto">
+      <div id="timeline-grid"></div>
+    </div>
+  </div>
 </div>
 
 <!-- RESOURCE -->
@@ -294,6 +311,10 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" class="up-member-cb" value="미정" style="width:auto;margin:0"> 미정</label>
     </div>
     <label>예정 업로드일</label><input type="date" id="up-date">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>편집 시작일 <span style="font-weight:400;color:#999">(선택)</span></label><input type="date" id="up-edit-start"></div>
+      <div><label>편집 마감일 <span style="font-weight:400;color:#999">(선택)</span></label><input type="date" id="up-edit-end"></div>
+    </div>
     <label>상태</label>
     <select id="up-status">
       <option value="plan">기획</option>
@@ -302,6 +323,10 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="review">검수 중</option>
       <option value="done">업로드 완료</option>
     </select>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;font-weight:400">
+      <input type="checkbox" id="up-savebon" style="width:auto;margin:0">
+      ⭐ 세이브본 필요 (미리 저장본 제작)
+    </label>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="up-delete-btn" style="display:none;margin-right:auto" onclick="deleteUploadFromModal()">삭제</button>
       <button class="btn" onclick="closeModal('modal-upload')">취소</button>
@@ -628,20 +653,157 @@ function filterUpload(f,el){
   });
   renderUpload();
 }
+
+let timelineYear=new Date().getFullYear(), timelineMonth=new Date().getMonth();
+
 function renderUpload(){
   let data=uploadFilter==='all'?[...uploadData]:uploadData.filter(u=>u.channel===uploadFilter);
   data.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  document.getElementById('upload-tbody').innerHTML=data.map(u=>{
+
+  const statusColors={plan:'#7F77DD',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
+
+  document.getElementById('upload-card-list').innerHTML=data.map(u=>{
     const s=statusMap[u.status]||{label:u.status,cls:'status-plan'};
     const chC=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
-    return `<tr onclick="openEditUpload('${u.id}')">
-      <td><span class="badge ${chC}">${u.channel==='seulgi'?'슬기':'소미'}</span></td>
-      <td>${u.title}</td><td>${u.member}</td><td>${u.date}</td>
-      <td><span class="status-badge ${s.cls}">${s.label}</span></td>
-      <td style="color:var(--color-text-secondary);font-size:12px">✎</td>
-    </tr>`;
-  }).join('');
+    const chL=u.channel==='seulgi'?'슬기':'소미';
+    const sColor=statusColors[u.status]||'#888';
+    const isDone=u.status==='done';
+    const hasSavebon=u.savebon;
+    const hasEditDates=u.edit_start||u.edit_end;
+
+    return `<div onclick="openEditUpload('${u.id}')" style="
+      background:var(--color-background-primary);
+      border:0.5px solid var(--color-border-tertiary);
+      border-left:3px solid ${sColor};
+      border-radius:var(--border-radius-lg);
+      padding:12px 16px;
+      cursor:pointer;
+      transition:box-shadow .15s;
+      opacity:${isDone?.7:1}
+    " onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <!-- 채널 배지 -->
+        <span class="badge ${chC}">${chL}</span>
+        <!-- 세이브본 -->
+        ${hasSavebon?`<span style="font-size:11px;background:#FFF8E1;color:#F59E0B;padding:2px 7px;border-radius:var(--border-radius-md);font-weight:600;border:0.5px solid #F59E0B">⭐ 세이브본</span>`:''}
+        <!-- 제목 -->
+        <span style="font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${u.title}</span>
+        <!-- 상태 -->
+        <span class="status-badge ${s.cls}">${s.label}</span>
+        <!-- 수정 아이콘 -->
+        <span style="color:var(--color-text-secondary);font-size:12px;flex-shrink:0">✎</span>
+      </div>
+      <!-- 하단 메타 -->
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-secondary)"><i class="ti ti-users" style="font-size:11px"></i> ${u.member}</span>
+        <span style="font-size:11px;color:var(--color-text-secondary)"><i class="ti ti-upload" style="font-size:11px"></i> 업로드 ${u.date}</span>
+        ${hasEditDates?`<span style="font-size:11px;color:${sColor};font-weight:500"><i class="ti ti-scissors" style="font-size:11px"></i> 편집 ${u.edit_start||'?'} ~ ${u.edit_end||'?'}</span>`:''}
+      </div>
+    </div>`;
+  }).join('') || `<div style="padding:20px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 일정이 없어요</div>`;
+
+  renderTimeline();
 }
+
+function changeTimelineMonth(d){
+  timelineMonth+=d;
+  if(timelineMonth>11){timelineMonth=0;timelineYear++;}
+  if(timelineMonth<0){timelineMonth=11;timelineYear--;}
+  renderTimeline();
+}
+
+function renderTimeline(){
+  const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const label=document.getElementById('timeline-month-label');
+  if(label) label.textContent=`${timelineYear}년 ${months[timelineMonth]}`;
+
+  const days=new Date(timelineYear,timelineMonth+1,0).getDate();
+  const today=new Date();
+  const statusColors={plan:'#7F77DD',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
+
+  // 이달 업로드 데이터 (편집 기간 있는 것 우선)
+  const filtered=uploadData.filter(u=>{
+    const hasEdit=u.edit_start||u.edit_end;
+    const uploadInMonth=u.date&&u.date.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`);
+    const editInMonth=hasEdit&&(
+      (u.edit_start&&u.edit_start.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`)) ||
+      (u.edit_end&&u.edit_end.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`))
+    );
+    return uploadInMonth||editInMonth;
+  });
+
+  const grid=document.getElementById('timeline-grid');
+  if(!grid) return;
+
+  if(!filtered.length){
+    grid.innerHTML=`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--color-text-secondary)">이달 편집 일정이 없어요</div>`;
+    return;
+  }
+
+  // 날짜 헤더
+  let headerHtml=`<div style="display:grid;grid-template-columns:140px repeat(${days},1fr);gap:0;min-width:${140+days*22}px">`;
+  headerHtml+=`<div style="font-size:10px;color:var(--color-text-secondary);padding:4px 8px"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
+    const dayOfWeek=new Date(ds).getDay();
+    const isSun=dayOfWeek===0, isSat=dayOfWeek===6;
+    headerHtml+=`<div style="text-align:center;font-size:9px;font-weight:${isToday?'700':'400'};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};padding:2px 0;${isToday?'background:#7F77DD22;border-radius:3px':''}">${d}</div>`;
+  }
+  headerHtml+=`</div>`;
+
+  // 각 영상별 행
+  let rowsHtml=`<div style="display:flex;flex-direction:column;gap:3px;min-width:${140+days*22}px">`;
+  filtered.forEach(u=>{
+    const color=statusColors[u.status]||'#888';
+    const chC=u.channel==='seulgi'?'#185FA5':'#993556';
+
+    rowsHtml+=`<div style="display:grid;grid-template-columns:140px repeat(${days},1fr);gap:0;align-items:center">`;
+    rowsHtml+=`<div style="font-size:10px;padding:2px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-primary)" title="${u.title}">
+      ${u.savebon?'⭐ ':''}
+      <span style="color:${chC};font-weight:600">[${u.channel==='seulgi'?'슬':' 소'}]</span>
+      ${u.title}
+    </div>`;
+
+    for(let d=1;d<=days;d++){
+      const ds=`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isUpload=u.date===ds;
+      const isEditStart=u.edit_start===ds;
+      const isEditEnd=u.edit_end===ds;
+      const inEditRange=u.edit_start&&u.edit_end&&ds>=u.edit_start&&ds<=u.edit_end;
+      const inEditOnly=u.edit_start&&!u.edit_end&&ds===u.edit_start;
+
+      let cellStyle='';
+      let cellContent='';
+
+      if(isUpload){
+        cellStyle=`background:${color};border-radius:3px;`;
+        cellContent=`<div title="업로드" style="width:100%;height:16px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">▲</div>`;
+      } else if(inEditRange||inEditOnly){
+        const isStart=isEditStart;
+        const isEnd=isEditEnd;
+        cellStyle=`background:${color}33;${isStart?'border-radius:3px 0 0 3px':''}${isEnd?'border-radius:0 3px 3px 0':''}`;
+        cellContent=`<div style="width:100%;height:16px;background:${color}${isStart||isEnd?'88':'44'}"></div>`;
+      } else {
+        cellContent=`<div style="width:100%;height:16px"></div>`;
+      }
+
+      rowsHtml+=`<div style="padding:1px;${cellStyle}">${cellContent}</div>`;
+    }
+    rowsHtml+=`</div>`;
+  });
+  rowsHtml+=`</div>`;
+
+  // 범례
+  const legendHtml=`<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
+    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#7F77DD44;display:inline-block;border-radius:2px"></span>편집 기간</span>
+    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#1D9E75;display:inline-block;border-radius:2px"></span>업로드일 ▲</span>
+    <span style="font-size:10px;color:var(--color-text-secondary)">⭐ 세이브본</span>
+  </div>`;
+
+  grid.innerHTML=headerHtml+rowsHtml+legendHtml;
+}
+
 
 // ── 공지 ──
 let curNoticeId=null;
@@ -901,7 +1063,10 @@ function openAddUpload(){
   document.getElementById('up-title').value='';
   document.querySelectorAll('.up-member-cb').forEach(cb=>cb.checked=false);
   document.getElementById('up-date').value='';
+  document.getElementById('up-edit-start').value='';
+  document.getElementById('up-edit-end').value='';
   document.getElementById('up-status').value='plan';
+  document.getElementById('up-savebon').checked=false;
   document.getElementById('up-delete-btn').style.display='none';
   document.getElementById('modal-upload').style.display='flex';
 }
@@ -914,7 +1079,10 @@ function openEditUpload(id){
   const members=(u.member||'').split(',').map(s=>s.trim());
   document.querySelectorAll('.up-member-cb').forEach(cb=>cb.checked=members.includes(cb.value));
   document.getElementById('up-date').value=u.date;
+  document.getElementById('up-edit-start').value=u.edit_start||'';
+  document.getElementById('up-edit-end').value=u.edit_end||'';
   document.getElementById('up-status').value=u.status;
+  document.getElementById('up-savebon').checked=!!u.savebon;
   document.getElementById('up-delete-btn').style.display='inline-flex';
   document.getElementById('modal-upload').style.display='flex';
 }
@@ -1018,7 +1186,14 @@ async function saveUpload(){
   if(!title||!date){showToast('제목과 날짜를 입력해주세요');return;}
   const checked=[...document.querySelectorAll('.up-member-cb:checked')].map(cb=>cb.value);
   if(!checked.length){showToast('담당자를 1명 이상 선택해주세요');return;}
-  const payload={channel:document.getElementById('up-channel').value,title,member:checked.join(', '),date,status:document.getElementById('up-status').value};
+  const payload={
+    channel:document.getElementById('up-channel').value,
+    title, member:checked.join(', '), date,
+    status:document.getElementById('up-status').value,
+    edit_start:document.getElementById('up-edit-start').value||null,
+    edit_end:document.getElementById('up-edit-end').value||null,
+    savebon:document.getElementById('up-savebon').checked
+  };
   let error;
   if(id){({error}=await db.from('uploads').update(payload).eq('id',id));}
   else{({error}=await db.from('uploads').insert(payload));}
