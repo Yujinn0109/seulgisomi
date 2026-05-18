@@ -33,8 +33,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--color-background-terti
 .btn-danger{color:#A32D2D;border-color:#F09595}.btn-danger:hover{background:#FCEBEB}
 .btn-sm{padding:3px 9px;font-size:11px}
 .badge{font-size:10px;padding:2px 7px;border-radius:var(--border-radius-md);font-weight:500}
-.badge-seulgi{background:#E6F1FB;color:#185FA5}
-.badge-somi{background:#FBEAF0;color:#993556}
+.badge-seulgi{background:#FFF8E1;color:#B45309}
+.badge-somi{background:#FDE8F0;color:#DB2777}
 .badge-both{background:#EEEDFE;color:#534AB7}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .modal{background:#fff;border-radius:12px;padding:24px;width:390px;border:1px solid #e0e0e0;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto}
@@ -188,8 +188,23 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     </div>
   </div>
 
-  <!-- 업로드 카드 리스트 -->
-  <div id="upload-card-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px"></div>
+  <!-- 2열 카드 리스트 (소미 | 슬기) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
+    <!-- 소미 -->
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span>
+      </div>
+      <div id="upload-list-somi" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <!-- 슬기 -->
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span>
+      </div>
+      <div id="upload-list-seulgi" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
 
   <!-- 타임라인 캘린더 -->
   <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
@@ -662,45 +677,47 @@ function renderUpload(){
 
   const statusColors={plan:'#7F77DD',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
 
-  document.getElementById('upload-card-list').innerHTML=data.map(u=>{
+  const makeCard = u => {
     const s=statusMap[u.status]||{label:u.status,cls:'status-plan'};
-    const chC=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
-    const chL=u.channel==='seulgi'?'슬기':'소미';
     const sColor=statusColors[u.status]||'#888';
     const isDone=u.status==='done';
-    const hasSavebon=u.savebon;
     const hasEditDates=u.edit_start||u.edit_end;
-
     return `<div onclick="openEditUpload('${u.id}')" style="
       background:var(--color-background-primary);
       border:0.5px solid var(--color-border-tertiary);
       border-left:3px solid ${sColor};
       border-radius:var(--border-radius-lg);
-      padding:12px 16px;
+      padding:10px 12px;
       cursor:pointer;
       transition:box-shadow .15s;
-      opacity:${isDone?.7:1}
+      opacity:${isDone?.65:1}
     " onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <!-- 채널 배지 -->
-        <span class="badge ${chC}">${chL}</span>
-        <!-- 세이브본 -->
-        ${hasSavebon?`<span style="font-size:11px;background:#FFF8E1;color:#F59E0B;padding:2px 7px;border-radius:var(--border-radius-md);font-weight:600;border:0.5px solid #F59E0B">⭐ 세이브본</span>`:''}
-        <!-- 제목 -->
-        <span style="font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${u.title}</span>
-        <!-- 상태 -->
-        <span class="status-badge ${s.cls}">${s.label}</span>
-        <!-- 수정 아이콘 -->
-        <span style="color:var(--color-text-secondary);font-size:12px;flex-shrink:0">✎</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        ${u.savebon?`<span style="font-size:10px;background:#FFF8E1;color:#F59E0B;padding:1px 6px;border-radius:4px;font-weight:600;border:0.5px solid #F59E0B;flex-shrink:0">⭐</span>`:''}
+        <span style="font-size:12px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${u.title}</span>
+        <span class="status-badge ${s.cls}" style="flex-shrink:0;font-size:10px">${s.label}</span>
       </div>
-      <!-- 하단 메타 -->
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--color-text-secondary)"><i class="ti ti-users" style="font-size:11px"></i> ${u.member}</span>
-        <span style="font-size:11px;color:var(--color-text-secondary)"><i class="ti ti-upload" style="font-size:11px"></i> 업로드 ${u.date}</span>
-        ${hasEditDates?`<span style="font-size:11px;color:${sColor};font-weight:500"><i class="ti ti-scissors" style="font-size:11px"></i> 편집 ${u.edit_start||'?'} ~ ${u.edit_end||'?'}</span>`:''}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--color-text-secondary)">${u.member}</span>
+        <span style="font-size:10px;color:var(--color-text-secondary)">↑ ${u.date}</span>
+        ${hasEditDates?`<span style="font-size:10px;color:${sColor};font-weight:500">✂ ${u.edit_start||'?'}~${u.edit_end||'?'}</span>`:''}
       </div>
     </div>`;
-  }).join('') || `<div style="padding:20px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 일정이 없어요</div>`;
+  };
+
+  const soميData=data.filter(u=>u.channel==='somi');
+  const seulgiData=data.filter(u=>u.channel==='seulgi');
+
+  const soميEl=document.getElementById('upload-list-somi');
+  const seulgiEl=document.getElementById('upload-list-seulgi');
+
+  if(soميEl) soميEl.innerHTML=soميData.length
+    ? soميData.map(makeCard).join('')
+    : `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
+
+  if(seulgiEl) seulgiEl.innerHTML=seulgiData.length
+    ? seulgiData.map(makeCard).join('')
+    : `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
 
   renderTimeline();
 }
@@ -719,89 +736,106 @@ function renderTimeline(){
 
   const days=new Date(timelineYear,timelineMonth+1,0).getDate();
   const today=new Date();
-  const statusColors={plan:'#7F77DD',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
+  const pad=n=>String(n).padStart(2,'0');
+  const monthStr=`${timelineYear}-${pad(timelineMonth+1)}`;
 
-  // 이달 업로드 데이터 (편집 기간 있는 것 우선)
-  const filtered=uploadData.filter(u=>{
-    const hasEdit=u.edit_start||u.edit_end;
-    const uploadInMonth=u.date&&u.date.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`);
-    const editInMonth=hasEdit&&(
-      (u.edit_start&&u.edit_start.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`)) ||
-      (u.edit_end&&u.edit_end.startsWith(`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}`))
-    );
-    return uploadInMonth||editInMonth;
-  });
+  // 담당자 순서
+  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','신규입사자A'];
+  const memberColors={
+    '지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754',
+    '체리시':'#47B5A8','메이':'#DBC0E8','신규입사자A':'#FBB28B'
+  };
 
   const grid=document.getElementById('timeline-grid');
   if(!grid) return;
 
-  if(!filtered.length){
-    grid.innerHTML=`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--color-text-secondary)">이달 편집 일정이 없어요</div>`;
-    return;
-  }
-
   // 날짜 헤더
-  let headerHtml=`<div style="display:grid;grid-template-columns:140px repeat(${days},1fr);gap:0;min-width:${140+days*22}px">`;
-  headerHtml+=`<div style="font-size:10px;color:var(--color-text-secondary);padding:4px 8px"></div>`;
+  const COL=24; // px per day
+  let html=`<div style="overflow-x:auto;padding-bottom:4px">`;
+  html+=`<div style="min-width:${120+days*COL}px">`;
+
+  // 헤더 행
+  html+=`<div style="display:flex;margin-bottom:2px">`;
+  html+=`<div style="width:120px;flex-shrink:0"></div>`;
   for(let d=1;d<=days;d++){
-    const ds=`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ds=`${monthStr}-${pad(d)}`;
     const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
-    const dayOfWeek=new Date(ds).getDay();
-    const isSun=dayOfWeek===0, isSat=dayOfWeek===6;
-    headerHtml+=`<div style="text-align:center;font-size:9px;font-weight:${isToday?'700':'400'};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};padding:2px 0;${isToday?'background:#7F77DD22;border-radius:3px':''}">${d}</div>`;
+    const dow=new Date(ds).getDay();
+    const isSun=dow===0, isSat=dow===6;
+    html+=`<div style="width:${COL}px;text-align:center;font-size:9px;font-weight:${isToday?700:400};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};flex-shrink:0;${isToday?'background:#7F77DD18;border-radius:2px':''}">${d}</div>`;
   }
-  headerHtml+=`</div>`;
+  html+=`</div>`;
 
-  // 각 영상별 행
-  let rowsHtml=`<div style="display:flex;flex-direction:column;gap:3px;min-width:${140+days*22}px">`;
-  filtered.forEach(u=>{
-    const color=statusColors[u.status]||'#888';
-    const chC=u.channel==='seulgi'?'#185FA5':'#993556';
+  // 담당자별 행
+  TIMELINE_MEMBERS.forEach(name=>{
+    const color=memberColors[name]||'#888';
 
-    rowsHtml+=`<div style="display:grid;grid-template-columns:140px repeat(${days},1fr);gap:0;align-items:center">`;
-    rowsHtml+=`<div style="font-size:10px;padding:2px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-primary)" title="${u.title}">
-      ${u.savebon?'⭐ ':''}
-      <span style="color:${chC};font-weight:600">[${u.channel==='seulgi'?'슬':' 소'}]</span>
-      ${u.title}
+    // 이 담당자가 포함된 업로드 항목
+    const tasks=uploadData.filter(u=>{
+      const members=(u.member||'').split(',').map(s=>s.trim());
+      return members.includes(name);
+    });
+
+    html+=`<div style="display:flex;align-items:center;margin-bottom:4px">`;
+    html+=`<div style="width:120px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding-right:8px">
+      <div style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0">${name.slice(0,1)}</div>
+      <span style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
     </div>`;
 
+    // 날짜 셀들
+    html+=`<div style="position:relative;height:22px;flex:1;display:flex">`;
     for(let d=1;d<=days;d++){
-      const ds=`${timelineYear}-${String(timelineMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isUpload=u.date===ds;
-      const isEditStart=u.edit_start===ds;
-      const isEditEnd=u.edit_end===ds;
-      const inEditRange=u.edit_start&&u.edit_end&&ds>=u.edit_start&&ds<=u.edit_end;
-      const inEditOnly=u.edit_start&&!u.edit_end&&ds===u.edit_start;
-
-      let cellStyle='';
-      let cellContent='';
-
-      if(isUpload){
-        cellStyle=`background:${color};border-radius:3px;`;
-        cellContent=`<div title="업로드" style="width:100%;height:16px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">▲</div>`;
-      } else if(inEditRange||inEditOnly){
-        const isStart=isEditStart;
-        const isEnd=isEditEnd;
-        cellStyle=`background:${color}33;${isStart?'border-radius:3px 0 0 3px':''}${isEnd?'border-radius:0 3px 3px 0':''}`;
-        cellContent=`<div style="width:100%;height:16px;background:${color}${isStart||isEnd?'88':'44'}"></div>`;
-      } else {
-        cellContent=`<div style="width:100%;height:16px"></div>`;
-      }
-
-      rowsHtml+=`<div style="padding:1px;${cellStyle}">${cellContent}</div>`;
+      const ds=`${monthStr}-${pad(d)}`;
+      const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
+      const dow=new Date(ds).getDay();
+      const isWeekend=dow===0||dow===6;
+      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;background:${isToday?'#7F77DD10':isWeekend?'var(--color-background-secondary)':'transparent'};border-right:0.5px solid var(--color-border-tertiary)"></div>`;
     }
-    rowsHtml+=`</div>`;
+
+    // 업무 바 오버레이
+    tasks.forEach(u=>{
+      if(!u.edit_start&&!u.edit_end&&!u.date) return;
+      const ch=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
+      const barColor=u.channel==='seulgi'?'#B45309':'#DB2777';
+      const startStr=u.edit_start||u.date;
+      const endStr=u.edit_end||u.date;
+
+      // 이달 범위 내로 클램핑
+      const start=new Date(Math.max(new Date(startStr),new Date(`${monthStr}-01`)));
+      const end=new Date(Math.min(new Date(endStr),new Date(timelineYear,timelineMonth+1,0)));
+      if(start>end) return;
+
+      const startDay=start.getDate();
+      const endDay=end.getDate();
+      const left=120+(startDay-1)*COL;
+      const width=(endDay-startDay+1)*COL;
+
+      const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
+      const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
+
+      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${u.title}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
+        <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
+      </div>`;
+
+      // 업로드일 마커 ▲
+      if(uploadDay&&uploadDay>=1&&uploadDay<=days){
+        const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
+        html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700" title="업로드 ${u.date}">▲</div>`;
+      }
+    });
+
+    html+=`</div></div>`;
   });
-  rowsHtml+=`</div>`;
 
   // 범례
-  const legendHtml=`<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
-    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#7F77DD44;display:inline-block;border-radius:2px"></span>편집 기간</span>
-    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#1D9E75;display:inline-block;border-radius:2px"></span>업로드일 ▲</span>
-    <span style="font-size:10px;color:var(--color-text-secondary)">⭐ 세이브본</span>
+  html+=`<div style="display:flex;gap:16px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary)">
+    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;background:#B45309;border-radius:2px;display:inline-block"></span>슬기</span>
+    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;background:#DB2777;border-radius:2px;display:inline-block"></span>소미</span>
+    <span style="font-size:10px;color:var(--color-text-secondary)">▲ 업로드일 &nbsp; ⭐ 세이브본</span>
   </div>`;
 
-  grid.innerHTML=headerHtml+rowsHtml+legendHtml;
+  html+=`</div></div>`;
+  grid.innerHTML=html;
 }
 
 
@@ -866,7 +900,7 @@ function renderResources(){
           const chL=r.channel==='seulgi'?'슬기':r.channel==='somi'?'소미':'공통';
           const hasLink=r.url&&r.url!=='#';
           return `<div class="resource-item">
-            ${hasLink?`<a href="${r.url}" target="_blank" rel="noopener" style="color:#185FA5;text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.name}</a>`
+            ${hasLink?`<a href="${r.url}" target="_blank" rel="noopener" style="color:#B45309;text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.name}</a>`
             :`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</span>`}
             <span class="badge ${chC}">${chL}</span>
             <div class="resource-actions">
