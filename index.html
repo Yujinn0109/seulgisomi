@@ -46,28 +46,28 @@ body{font-family:'Pretendard',sans-serif;background:var(--color-background-terti
 .modal-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 .card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
 /* Calendar */
-.cal-grid{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
-.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:var(--color-background-secondary)}
-.cal-weekday{text-align:center;padding:8px 0;font-size:12px;font-weight:500;color:var(--color-text-secondary)}
-.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-day{min-height:90px;padding:6px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background .1s}
-.cal-day:hover{background:var(--color-background-secondary)}
-.cal-day.other-month .day-num{color:var(--color-text-tertiary)}
-.cal-day.today .day-num{background:#7F77DD;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:500}
-.day-num{font-size:12px;font-weight:500;margin-bottom:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
-.cal-event{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.t-shoot{background:#FAEEDA;color:#633806}.t-meeting{background:#EAF3DE;color:#27500A}.t-holiday{background:#FCEBEB;color:#791F1F}
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)}
-.legend-dot{width:10px;height:10px;border-radius:50%}
-.gcal-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500}
-.gcal-badge.synced{background:#EAF3DE;color:#27500A}.gcal-badge.error{background:#FCEBEB;color:#791F1F}.gcal-badge.loading{background:#EEEDFE;color:#534AB7}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* Upload table */
-.upload-table{width:100%;border-collapse:collapse;background:var(--color-background-primary);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
-.upload-table th{padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
-.upload-table td{padding:10px 14px;font-size:13px;border-bottom:0.5px solid var(--color-border-tertiary)}
-.upload-table tr:last-child td{border-bottom:none}
-.upload-table tr:hover td{background:var(--color-background-secondary);cursor:pointer}
+
+
+
+
+
 .status-badge{font-size:11px;padding:3px 8px;border-radius:var(--border-radius-md);font-weight:500}
 .status-done{background:#EAF3DE;color:#27500A}.status-edit{background:#E6F1FB;color:#0C447C}.status-plan{background:#EEEDFE;color:#3C3489}.status-review{background:#FAEEDA;color:#633806}.status-shoot{background:#FEF0E6;color:#7A3800}
 /* Resource */
@@ -94,6 +94,37 @@ body{font-family:'Pretendard',sans-serif;background:var(--color-background-terti
 .memo-title-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;transition:background .1s}
 .memo-title-row:hover{background:var(--color-background-secondary)}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+/* ── 모바일 반응형 ── */
+@media (max-width: 768px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:relative;padding:12px 0;border-right:none;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .sidebar-logo{padding:0 16px 12px;margin-bottom:8px}
+  .sidebar-logo h1{font-size:14px}
+  .nav-item{padding:8px 16px;font-size:13px;border-left:none;border-bottom:2px solid transparent}
+  .nav-item.active{border-left:none;border-bottom:2px solid #7F77DD}
+  /* 사이드바 수평 스크롤 */
+  .sidebar > .nav-item{display:inline-flex;white-space:nowrap}
+  .sidebar{display:flex;flex-direction:row;overflow-x:auto;align-items:center;gap:0}
+  .sidebar-logo{flex-shrink:0;border-bottom:none;padding:0 16px}
+  .main{padding:14px}
+  /* 홈 그리드 1열로 */
+  #page-home > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  /* 팀원 현황 2열로 */
+  #member-tasks{grid-template-columns:repeat(2,1fr) !important}
+  /* 업로드 2열 → 1열 */
+  #page-upload > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  /* 리소스 그리드 1열 */
+  .resource-grid{grid-template-columns:1fr !important}
+  /* 모달 */
+  .modal{width:calc(100vw - 32px) !important;max-width:100%;padding:16px}
+  /* 공지 탭 */
+  #tab-episode, #tab-internal{padding:6px 12px;font-size:12px}
+}
+@media (max-width: 480px){
+  #member-tasks{grid-template-columns:1fr !important}
+  .main{padding:10px}
+}
 </style>
 </head>
 <body>
@@ -872,7 +903,10 @@ function renderTimeline(){
       const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
       const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
 
-      html += `<div style="position:absolute; left:${left}px; width:${width}px; background-color:${barColor}; height:12px; border-radius:6px; top:2px; opacity:0.85;" title="${u.title || '편집 스케줄'}"></div>`;
+      const titleAttr=u.title+(personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})`:'');
+      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${titleAttr}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
+        <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
+      </div>`;
 
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
         const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
