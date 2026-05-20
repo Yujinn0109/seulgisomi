@@ -272,6 +272,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <thead>
         <tr style="background:var(--color-background-secondary)">
           <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:140px">영상 제목</th>
+          <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:90px">촬영일</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">지니</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">이든</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">제이미</th>
@@ -297,6 +298,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <button onclick="closeModal('modal-shoot')" style="background:none;border:none;cursor:pointer;color:#999;font-size:20px;padding:0 0 0 12px">×</button>
     </div>
     <div style="margin:14px 0;border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
+      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:6px">📅 촬영일</label>
+      <div id="sh-dates-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button type="button" onclick="addShootDateRow()" style="width:100%;padding:6px;border:0.5px dashed #ccc;border-radius:6px;background:#f8f8f8;cursor:pointer;font-size:12px;color:var(--color-text-secondary)">+ 촬영일 추가</button>
+    </div>
+    <div style="margin-bottom:14px;border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
       <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:6px">📋 촬영 멤버</label>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="sh-modal-members"></div>
       <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:6px">🎥 촬영팀</label>
@@ -703,7 +709,7 @@ const statusMap = {
   shoot:  {label:'촬영 완료',   cls:'status-shoot'}
 };
 
-let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[];
+let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[];
 let memberExtraTasks={}, memberStatuses={}, memberSchedulesData={};
 let gcalEvents=[];
 let curYear=new Date().getFullYear(), curMonth=new Date().getMonth();
@@ -724,7 +730,7 @@ function execFontSize(s){document.execCommand('fontSize',false,s);document.getEl
 async function loadData(){
   setLoading(true);
   try{
-    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR]=await Promise.all([
+    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR]=await Promise.all([
       db.from('events').select('*').order('date'),
       db.from('uploads').select('*').order('date'),
       db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
@@ -734,11 +740,12 @@ async function loadData(){
       db.from('member_tasks').select('*').order('created_at'),
       db.from('member_statuses').select('*'),
       db.from('upload_member_schedules').select('*'),
-      db.from('shoots').select('*')
+      db.from('shoots').select('*'),
+      db.from('shoot_dates').select('*').order('shoot_date')
     ]);
     events=evR.data||[]; uploadData=upR.data||[]; noticeData=noR.data||[];
     resourceData=reR.data||[]; memoData=moR.data||[]; handoverData=hwR.data||[];
-    shootData=shR.data||[];
+    shootData=shR.data||[]; shootDatesData=sdR.data||[];
     // 업로드별 멤버 스케줄 맵핑
     memberSchedulesData={};
     (msR.data||[]).forEach(s=>{
@@ -830,13 +837,15 @@ function renderShoot(){
     const chC=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
     const chL=u.channel==='seulgi'?'슬기':'소미';
     const hasMemo=sh.memo&&sh.memo.trim();
+    // 촬영일 목록
+    const dates=shootDatesData.filter(d=>d.upload_id===u.id);
+    const datesHtml=dates.length
+      ? dates.map(d=>`<div style="font-size:11px;color:#7F77DD;font-weight:500">${d.shoot_date.slice(5).replace('-','/')}${d.note?` <span style="color:var(--color-text-secondary);font-weight:400">· ${d.note}</span>`:''}</div>`).join('')
+      : `<span style="font-size:11px;color:var(--color-text-secondary)">-</span>`;
 
-    // 멤버 체크 표시
     const memberCells=SHOOT_MEMBERS.map(name=>`
       <td style="padding:10px 8px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary)">
-        ${checkedMembers.includes(name)
-          ?`<span style="color:${SHOOT_MEMBER_COLORS[name]};font-size:16px;font-weight:700">✓</span>`
-          :''}
+        ${checkedMembers.includes(name)?`<span style="color:${SHOOT_MEMBER_COLORS[name]};font-size:16px;font-weight:700">✓</span>`:''}
       </td>`).join('');
 
     return `<tr style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background=''" onclick="openShootModal('${u.id}')">
@@ -850,10 +859,22 @@ function renderShoot(){
           ${hasMemo?`<span style="font-size:10px;background:#EEEDFE;color:#534AB7;padding:1px 5px;border-radius:3px;flex-shrink:0">메모</span>`:''}
         </div>
       </td>
+      <td style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">${datesHtml}</td>
       ${memberCells}
       <td style="padding:10px 14px;font-size:12px;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">${sh.shoot_team||''}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="8" style="padding:24px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 영상이 없어요</td></tr>`;
+  }).join('') || `<tr><td colspan="9" style="padding:24px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 영상이 없어요</td></tr>`;
+}
+
+function addShootDateRow(date='', note=''){
+  const list=document.getElementById('sh-dates-list');
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:6px';
+  row.innerHTML=`
+    <input type="date" value="${date}" style="flex:1;font-size:12px;padding:5px 8px;border:1px solid #d0d0d0;border-radius:6px;outline:none">
+    <input type="text" value="${note}" placeholder="메모 (선택)" style="flex:1.5;font-size:12px;padding:5px 8px;border:1px solid #d0d0d0;border-radius:6px;outline:none">
+    <button type="button" onclick="this.closest('div').remove()" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:16px;padding:0 2px">×</button>`;
+  list.appendChild(row);
 }
 
 function openShootModal(uploadId){
@@ -861,16 +882,25 @@ function openShootModal(uploadId){
   if(!u)return;
   const sh=shootData.find(s=>s.upload_id===uploadId)||{};
   const checkedMembers=(sh.members||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const existingDates=shootDatesData.filter(d=>d.upload_id===uploadId);
 
   document.getElementById('sh-upload-id').value=uploadId;
   document.getElementById('sh-modal-title').textContent=u.title;
   const chL=u.channel==='seulgi'?'슬기':'소미';
   const chC=u.channel==='seulgi'?'color:#B45309':'color:#DB2777';
-  document.getElementById('sh-modal-channel').innerHTML=`<span style="${chC};font-weight:600">${chL}</span> · ${u.date}`;
+  document.getElementById('sh-modal-channel').innerHTML=`<span style="${chC};font-weight:600">${chL}</span> · 업로드 ${u.date}`;
   document.getElementById('sh-team-input').value=sh.shoot_team||'';
   document.getElementById('sh-memo-input').value=sh.memo||'';
 
-  // 멤버 체크박스 렌더링
+  // 촬영일 초기화 후 기존 데이터 복원
+  document.getElementById('sh-dates-list').innerHTML='';
+  if(existingDates.length){
+    existingDates.forEach(d=>addShootDateRow(d.shoot_date, d.note||''));
+  } else {
+    addShootDateRow(); // 빈 행 하나
+  }
+
+  // 멤버 체크박스
   document.getElementById('sh-modal-members').innerHTML=SHOOT_MEMBERS.map(name=>{
     const color=SHOOT_MEMBER_COLORS[name];
     const checked=checkedMembers.includes(name);
@@ -880,7 +910,6 @@ function openShootModal(uploadId){
     </label>`;
   }).join('');
 
-  // 체크박스 실시간 스타일 업데이트
   document.querySelectorAll('.sh-member-cb').forEach(cb=>{
     cb.addEventListener('change', ()=>{
       const lbl=cb.closest('label');
@@ -900,9 +929,16 @@ async function saveShoot(){
   const team=document.getElementById('sh-team-input').value.trim();
   const memo=document.getElementById('sh-memo-input').value.trim();
 
+  // 촬영일 수집
+  const dateRows=[...document.getElementById('sh-dates-list').children];
+  const newDates=dateRows.map(row=>{
+    const inputs=row.querySelectorAll('input');
+    return {date:inputs[0]?.value, note:inputs[1]?.value||''};
+  }).filter(d=>d.date);
+
+  // shoots 저장
   const existing=shootData.find(s=>s.upload_id===uploadId);
   const payload={upload_id:uploadId, members:checked.join(', '), shoot_team:team, memo};
-
   let error;
   if(existing){
     ({error}=await db.from('shoots').update(payload).eq('id',existing.id));
@@ -910,6 +946,15 @@ async function saveShoot(){
     ({error}=await db.from('shoots').insert(payload));
   }
   if(error){showToast('저장 실패: '+error.message);return;}
+
+  // shoot_dates 저장 (기존 삭제 후 재삽입)
+  await db.from('shoot_dates').delete().eq('upload_id',uploadId);
+  if(newDates.length){
+    const rows=newDates.map(d=>({upload_id:uploadId, shoot_date:d.date, note:d.note}));
+    const{error:e}=await db.from('shoot_dates').insert(rows);
+    if(e){showToast('촬영일 저장 실패: '+e.message);return;}
+  }
+
   closeModal('modal-shoot');
   showToast('저장됐어요 ✓');
 }
