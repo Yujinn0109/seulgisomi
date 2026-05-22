@@ -1107,7 +1107,7 @@ function renderTimeline(){
 
       const startDay=start.getDate();
       const endDay=end.getDate();
-      const left=120+(startDay-1)*COL;
+      const left=(startDay-1)*COL;
       const width=(endDay-startDay+1)*COL;
 
       const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
@@ -1115,7 +1115,6 @@ function renderTimeline(){
 
       const titleAttr=u.title+(personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})`:'');
 
-      // 바 렌더
       html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${titleAttr}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
         <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
       </div>`;
@@ -1124,13 +1123,13 @@ function renderTimeline(){
       for(let d=startDay;d<=endDay;d++){
         const dow=new Date(timelineYear, timelineMonth, d).getDay();
         if(dow===0||dow===6){
-          const stripeLeft=120+(d-1)*COL;
+          const stripeLeft=(d-1)*COL;
           html+=`<div style="position:absolute;left:${stripeLeft}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
         }
       }
 
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
-        const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
+        const uploadLeft=(uploadDay-1)*COL+COL/2-4;
         html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700;z-index:2" title="업로드 ${u.date}">▲</div>`;
       }
     });
@@ -1152,7 +1151,7 @@ function renderTimeline(){
   if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
     const scrollEl=grid.querySelector('[style*="overflow-x:auto"]');
     if(scrollEl){
-      const scrollLeft=120+(today.getDate()-4)*COL; // 오늘 4일 전부터 보이게
+      const scrollLeft=(today.getDate()-4)*COL; // 오늘 4일 전부터 보이게
       setTimeout(()=>scrollEl.scrollLeft=Math.max(0,scrollLeft),50);
     }
   }
