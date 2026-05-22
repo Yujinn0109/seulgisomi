@@ -1091,6 +1091,11 @@ function renderTimeline(){
       const isWeekend=dow===0||dow===6;
       html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);background:${isToday?'#7F77DD10':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
     }
+    // 오늘 세로선
+    if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
+      const todayLeft=(today.getDate()-1)*COL+COL/2;
+      html+=`<div style="position:absolute;left:${todayLeft}px;top:0;bottom:0;width:1.5px;background:#7F77DD55;pointer-events:none;z-index:3"></div>`;
+    }
 
       // 업무 바 오버레이 — 멤버별 개인 스케줄 우선 사용
     tasks.forEach(u=>{
@@ -1149,9 +1154,9 @@ function renderTimeline(){
 
   // 오늘이 이달이면 오늘 날짜로 자동 스크롤
   if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
-    const scrollEl=grid.querySelector('[style*="overflow-x:auto"]');
+    const scrollEl=grid.parentElement; // padding:12px 16px;overflow-x:auto 컨테이너
     if(scrollEl){
-      const scrollLeft=(today.getDate()-4)*COL; // 오늘 4일 전부터 보이게
+      const scrollLeft=(today.getDate()-4)*COL;
       setTimeout(()=>scrollEl.scrollLeft=Math.max(0,scrollLeft),50);
     }
   }
