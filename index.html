@@ -1089,13 +1089,12 @@ function renderTimeline(){
       const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
       const dow=new Date(ds).getDay();
       const isWeekend=dow===0||dow===6;
-      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;background:${isToday?'#7F77DD10':isWeekend?'var(--color-background-secondary)':'transparent'};border-right:0.5px solid var(--color-border-tertiary)"></div>`;
+      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);background:${isToday?'#7F77DD10':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
     }
 
-    // 업무 바 오버레이 — 멤버별 개인 스케줄 우선 사용
+      // 업무 바 오버레이 — 멤버별 개인 스케줄 우선 사용
     tasks.forEach(u=>{
       const barColor=u.channel==='seulgi'?'#B45309':'#DB2777';
-      // 멤버별 개인 스케줄 확인
       const memberScheds=memberSchedulesData[u.id]||[];
       const personalSched=memberScheds.find(s=>s.member_name===name);
       const startStr=personalSched?.edit_start||u.edit_start||u.date;
@@ -1115,13 +1114,24 @@ function renderTimeline(){
       const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
 
       const titleAttr=u.title+(personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})`:'');
+
+      // 바 렌더
       html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${titleAttr}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
         <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
       </div>`;
 
+      // 주말 세로 스트라이프 오버레이 (바 위에 덮기)
+      for(let d=startDay;d<=endDay;d++){
+        const dow=new Date(`${monthStr}-${pad(d)}`).getDay();
+        if(dow===0||dow===6){
+          const stripeLeft=120+(d-1)*COL;
+          html+=`<div style="position:absolute;left:${stripeLeft}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
+        }
+      }
+
       if(uploadDay&&uploadDay>=1&&uploadDay<=days){
         const uploadLeft=120+(uploadDay-1)*COL+COL/2-4;
-        html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700" title="업로드 ${u.date}">▲</div>`;
+        html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700;z-index:2" title="업로드 ${u.date}">▲</div>`;
       }
     });
 
@@ -1137,6 +1147,15 @@ function renderTimeline(){
 
   html+=`</div></div>`;
   grid.innerHTML=html;
+
+  // 오늘이 이달이면 오늘 날짜로 자동 스크롤
+  if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
+    const scrollEl=grid.querySelector('[style*="overflow-x:auto"]');
+    if(scrollEl){
+      const scrollLeft=120+(today.getDate()-4)*COL; // 오늘 4일 전부터 보이게
+      setTimeout(()=>scrollEl.scrollLeft=Math.max(0,scrollLeft),50);
+    }
+  }
 }
 
 
