@@ -1060,7 +1060,7 @@ function renderTimeline(){
   for(let d=1;d<=days;d++){
     const ds=`${monthStr}-${pad(d)}`;
     const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
-    const dow=new Date(ds).getDay();
+    const dow=new Date(timelineYear, timelineMonth, d).getDay();
     const isSun=dow===0, isSat=dow===6;
     html+=`<div style="width:${COL}px;text-align:center;font-size:9px;font-weight:${isToday?700:400};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};flex-shrink:0;${isToday?'background:#7F77DD18;border-radius:2px':''}">${d}</div>`;
   }
@@ -1087,7 +1087,7 @@ function renderTimeline(){
     for(let d=1;d<=days;d++){
       const ds=`${monthStr}-${pad(d)}`;
       const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
-      const dow=new Date(ds).getDay();
+      const dow=new Date(timelineYear, timelineMonth, d).getDay();
       const isWeekend=dow===0||dow===6;
       html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);background:${isToday?'#7F77DD10':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
     }
@@ -1122,7 +1122,7 @@ function renderTimeline(){
 
       // 주말 세로 스트라이프 오버레이 (바 위에 덮기)
       for(let d=startDay;d<=endDay;d++){
-        const dow=new Date(`${monthStr}-${pad(d)}`).getDay();
+        const dow=new Date(timelineYear, timelineMonth, d).getDay();
         if(dow===0||dow===6){
           const stripeLeft=120+(d-1)*COL;
           html+=`<div style="position:absolute;left:${stripeLeft}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
