@@ -175,8 +175,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px">
-        <i class="ti ti-arrow-right-circle" style="font-size:17px;color:#F76754"></i>
-        <span style="font-size:13px;font-weight:500">인수인계</span>
+        <i class="ti ti-checklist" style="font-size:17px;color:#F76754"></i>
+        <span style="font-size:13px;font-weight:500">To Do List</span>
       </div>
       <button class="btn btn-primary" style="padding:4px 12px;font-size:12px" onclick="openAddHandover()"><i class="ti ti-plus"></i> 추가</button>
     </div>
@@ -278,7 +278,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">제이미</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">체리시</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">메이</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">신규입사자A</th>
+          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">송혜인</th>
           <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:120px">촬영팀</th>
         </tr>
       </thead>
@@ -385,7 +385,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <select id="ev-member">
       <option value="jini">지니</option><option value="eden">이든</option>
       <option value="jamie">제이미</option><option value="cherish">체리시</option>
-      <option value="may">메이</option><option value="new">신규입사자A</option>
+      <option value="may">메이</option><option value="new">송혜인</option>
       <option value="maeve">메이브</option><option value="team">팀 전체</option>
     </select>
     <label>채널</label>
@@ -450,11 +450,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="신규입사자A" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 신규입사자A</label>
-        <div id="dates-신규입사자A" style="display:none;flex:1;gap:6px;align-items:center">
-          <input type="date" id="es-신규입사자A" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="송혜인" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 송혜인</label>
+        <div id="dates-송혜인" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-송혜인" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
           <span style="font-size:11px;color:#888">~</span>
-          <input type="date" id="ee-신규입사자A" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <input type="date" id="ee-송혜인" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -600,41 +600,44 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <!-- 개인 상태 -->
 <div id="modal-status" class="modal-overlay" style="display:none" onclick="closeModal('modal-status',event)">
-  <div class="modal"><h3 id="status-modal-title">오늘 상태 설정</h3>
-    <label>상태</label>
-    <select id="status-type">
-      <option value="">없음 (출근)</option>
-      <option value="재택">🏠 재택근무</option>
-      <option value="휴가">🌴 휴가</option>
-      <option value="반차">🌤 반차</option>
-      <option value="외근">📍 외근</option>
-      <option value="병가">💊 병가</option>
-    </select>
-    <label>메모 (선택)</label><input type="text" id="status-memo" placeholder="예: 오후 복귀 예정">
+  <div class="modal"><h3 id="status-modal-title">재택근무일 설정</h3>
+    <label>재택 요일 <span style="font-weight:400;color:#999">(복수 선택 가능)</span></label>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="wfh-day" value="월" style="width:auto;margin:0"> 월</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="wfh-day" value="화" style="width:auto;margin:0"> 화</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="wfh-day" value="수" style="width:auto;margin:0"> 수</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="wfh-day" value="목" style="width:auto;margin:0"> 목</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="wfh-day" value="금" style="width:auto;margin:0"> 금</label>
+    </div>
+    <label>메모 <span style="font-weight:400;color:#999">(선택)</span></label>
+    <input type="text" id="status-memo" placeholder="예: 오후 복귀 예정">
     <input type="hidden" id="status-member-id">
     <div class="modal-btns">
+      <button class="btn btn-danger btn-sm" onclick="clearMemberStatus()" style="margin-right:auto">초기화</button>
       <button class="btn" onclick="closeModal('modal-status')">취소</button>
       <button class="btn btn-primary" onclick="saveMemberStatus()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- 인수인계 -->
+<!-- To Do List -->
 <div id="modal-handover" class="modal-overlay" style="display:none" onclick="closeModal('modal-handover',event)">
-  <div class="modal" style="width:440px"><h3 id="hw-modal-title">인수인계 추가</h3>
+  <div class="modal" style="width:440px"><h3 id="hw-modal-title">할 일 추가</h3>
     <input type="hidden" id="hw-edit-id">
-    <label>제목</label><input type="text" id="hw-title" placeholder="예: 색보정 파일 전달">
+    <label>할 일</label><input type="text" id="hw-title" placeholder="예: 썸네일 수정 요청">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>인계자 (From)</label>
+      <div><label>담당자</label>
         <select id="hw-from">
           <option>지니</option><option>이든</option><option>제이미</option>
-          <option>체리시</option><option>메이</option><option>신규입사자A</option><option>메이브</option>
+          <option>체리시</option><option>메이</option><option>송혜인</option><option>메이브</option>
+          <option>팀 전체</option>
         </select>
       </div>
-      <div><label>인수자 (To)</label>
-        <select id="hw-to">
-          <option>지니</option><option>이든</option><option>제이미</option>
-          <option>체리시</option><option>메이</option><option>신규입사자A</option><option>메이브</option>
+      <div><label>채널</label>
+        <select id="hw-channel">
+          <option value="both">공통</option>
+          <option value="seulgi">슬기</option>
+          <option value="somi">소미</option>
         </select>
       </div>
     </div>
@@ -651,7 +654,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       </div>
     </div>
     <label>상세 내용 <span style="font-weight:400;color:#999">(선택)</span></label>
-    <textarea id="hw-detail" placeholder="예: Drive 경로, 파일명 등" style="height:70px"></textarea>
+    <textarea id="hw-detail" placeholder="상세 내용 입력" style="height:70px"></textarea>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="hw-delete-btn" style="display:none;margin-right:auto" onclick="deleteHandoverFromModal()">삭제</button>
       <button class="btn" onclick="closeModal('modal-handover')">취소</button>
@@ -696,7 +699,7 @@ const MEMBERS = {
   jamie:  {label:'제이미',    color:'#F76754'},
   cherish:{label:'체리시',    color:'#47B5A8'},
   may:    {label:'메이',      color:'#DBC0E8'},
-  new:    {label:'신규입사자A',color:'#FBB28B'},
+  new:    {label:'송혜인',color:'#FBB28B'},
   maeve:  {label:'메이브',    color:'#B2DD9E'},
   team:   {label:'팀 전체',   color:'#534AB7'}
 };
@@ -814,8 +817,8 @@ function switchCalView(mode){
 function changeMonth(){} // 더 이상 사용 안 하지만 오류 방지용
 
 // ── 촬영 ──
-const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','신규입사자A'];
-const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#DBC0E8','신규입사자A':'#FBB28B'};
+const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','송혜인'];
+const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#DBC0E8','송혜인':'#FBB28B'};
 let shootFilter='all';
 
 function filterShoot(f,el){
@@ -1040,10 +1043,10 @@ function renderTimeline(){
   const monthStr=`${timelineYear}-${pad(timelineMonth+1)}`;
 
   // 담당자 순서
-  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','신규입사자A'];
+  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','송혜인'];
   const memberColors={
     '지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754',
-    '체리시':'#47B5A8','메이':'#DBC0E8','신규입사자A':'#FBB28B'
+    '체리시':'#47B5A8','메이':'#DBC0E8','송혜인':'#FBB28B'
   };
 
   const grid=document.getElementById('timeline-grid');
@@ -1154,7 +1157,7 @@ function renderTimeline(){
 
   // 오늘이 이달이면 오늘 날짜로 자동 스크롤
   if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
-    const scrollEl=grid.parentElement; // padding:12px 16px;overflow-x:auto 컨테이너
+    const scrollEl=document.getElementById('timeline-scroll');
     if(scrollEl){
       const scrollLeft=(today.getDate()-4)*COL;
       setTimeout(()=>scrollEl.scrollLeft=Math.max(0,scrollLeft),50);
@@ -1321,8 +1324,6 @@ function renderHome(){
     }).join('');
 
   // 팀원 현황
-  const stColors={재택:'#378ADD',휴가:'#1D9E75',반차:'#BA7517',외근:'#D4537E',병가:'#E24B4A'};
-  const stIcons={재택:'🏠',휴가:'🌴',반차:'🌤',외근:'📍',병가:'💊'};
   const uploadTaskMap={};
   uploadData.filter(u=>u.status==='edit'||u.status==='review').forEach(u=>{
     u.member.split(',').map(s=>s.trim()).forEach(name=>{
@@ -1354,7 +1355,7 @@ function renderHome(){
         <div style="width:34px;height:34px;border-radius:50%;background:${m.color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">${m.label.slice(0,2)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${m.label}</div>
-          ${st&&st.type?`<div style="font-size:10px;color:${stColors[st.type]||'#888'};margin-top:1px">${stIcons[st.type]||''} ${st.type}${st.memo?' — '+st.memo:''}</div>`:`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px">출근 중</div>`}
+          ${st&&st.type?`<div style="font-size:10px;color:#378ADD;margin-top:1px">🏠 재택: ${st.type}${st.memo?' · '+st.memo:''}</div>`:`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px">출근 중</div>`}
         </div>
         <button onclick="openStatusModal('${mid}')" style="background:rgba(255,255,255,.7);border:0.5px solid ${m.color}66;cursor:pointer;color:${m.color};font-size:10px;padding:2px 7px;border-radius:4px;flex-shrink:0">상태</button>
       </div>
@@ -1366,33 +1367,41 @@ function renderHome(){
   }).join('');
 }
 
-// ── 인수인계 ──
+// ── To Do List ──
 function renderHandovers(){
   const el=document.getElementById('handover-list');
   if(!el)return;
-  if(!handoverData.length){el.innerHTML=`<div style="font-size:12px;color:var(--color-text-secondary)">아직 인수인계 내역이 없어요</div>`;return;}
+  if(!handoverData.length){el.innerHTML=`<div style="font-size:12px;color:var(--color-text-secondary)">아직 할 일이 없어요</div>`;return;}
   const dlColor={'오늘 마감':'#E24B4A','오늘 중':'#F76754','이번 주 내':'#BA7517','다음 주 내':'#888','미정':'#888'};
-  el.innerHTML=handoverData.map(hw=>{
-    const fromM=Object.values(MEMBERS).find(m=>m.label===hw.from_member);
-    const toM=Object.values(MEMBERS).find(m=>m.label===hw.to_member);
+  // 진행중 먼저, 완료는 아래
+  const sorted=[...handoverData].sort((a,b)=>{
+    if(a.status==='done'&&b.status!=='done')return 1;
+    if(a.status!=='done'&&b.status==='done')return -1;
+    return 0;
+  });
+  el.innerHTML=sorted.map(hw=>{
+    const assignee=hw.from_member;
+    const assigneeM=Object.values(MEMBERS).find(m=>m.label===assignee);
     const isDone=hw.status==='done';
     const dlC=dlColor[hw.deadline]||'#888';
-    return `<div style="border-left:3px solid ${isDone?'#ccc':fromM?.color||'#888'};padding:10px 12px;background:var(--color-background-secondary);border-radius:0 8px 8px 0;opacity:${isDone?.6:1}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:${isDone?'400':'500'};${isDone?'text-decoration:line-through':''}">${hw.title}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
-            <span style="font-size:11px;font-weight:500;color:${fromM?.color||'#888'}">${hw.from_member}</span>
-            <i class="ti ti-arrow-right" style="font-size:11px;color:var(--color-text-secondary)"></i>
-            <span style="font-size:11px;font-weight:500;color:${toM?.color||'#888'}">${hw.to_member}</span>
-            ${hw.deadline?`<span style="font-size:10px;padding:1px 6px;background:${isDone?'#eee':dlC+'22'};color:${isDone?'#888':dlC};border-radius:4px;font-weight:500">${hw.deadline}</span>`:''}
-          </div>
-          ${hw.detail?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${hw.detail}</div>`:''}
+    const chC=hw.channel==='seulgi'?'badge-seulgi':hw.channel==='somi'?'badge-somi':'badge-both';
+    const chL=hw.channel==='seulgi'?'슬기':hw.channel==='somi'?'소미':'공통';
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);opacity:${isDone?.6:1};border-left:3px solid ${isDone?'#ccc':assigneeM?.color||'#F76754'}">
+      <button onclick="completeHandover('${hw.id}')" style="flex-shrink:0;width:18px;height:18px;border-radius:50%;border:2px solid ${isDone?'#1D9E75':'#ccc'};background:${isDone?'#1D9E75':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;padding:0">
+        ${isDone?'<span style="color:#fff;font-size:10px">✓</span>':''}
+      </button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:${isDone?'400':'500'};${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''};margin-bottom:4px">${hw.title}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:500;color:${assigneeM?.color||'#888'}">${assignee}</span>
+          <span class="badge ${chC}" style="font-size:10px">${chL}</span>
+          ${hw.deadline?`<span style="font-size:10px;padding:1px 6px;background:${isDone?'#eee':dlC+'22'};color:${isDone?'#888':dlC};border-radius:4px;font-weight:500">${hw.deadline}</span>`:''}
         </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          ${!isDone?`<button onclick="completeHandover('${hw.id}')" style="background:none;border:0.5px solid #ccc;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--color-text-secondary)">✓</button>`:''}
-          <button onclick="deleteHandoverBtn('${hw.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:0 2px">✕</button>
-        </div>
+        ${hw.detail?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${hw.detail}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button onclick="editHandoverBtn('${hw.id}')" style="background:none;border:0.5px solid #ccc;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--color-text-secondary)">✎</button>
+        <button onclick="deleteHandoverBtn('${hw.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:0 2px">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -1420,7 +1429,7 @@ function toggleMemberDates(cb){
   if(datesDiv) datesDiv.style.display=cb.checked?'flex':'none';
 }
 
-const UPLOAD_MEMBERS=['지니','이든','제이미','체리시','메이','신규입사자A','외주','미정'];
+const UPLOAD_MEMBERS=['지니','이든','제이미','체리시','메이','송혜인','외주','미정'];
 
 function openAddUpload(){
   document.getElementById('up-modal-title').textContent='업로드 일정 추가';
@@ -1517,22 +1526,42 @@ function openTaskModal(mid){
 }
 function openStatusModal(mid){
   document.getElementById('status-member-id').value=mid;
-  document.getElementById('status-modal-title').textContent=`${MEMBERS[mid]?.label} 오늘 상태`;
+  document.getElementById('status-modal-title').textContent=`${MEMBERS[mid]?.label} 재택근무일 설정`;
   const cur=memberStatuses[mid];
-  document.getElementById('status-type').value=cur?.type||'';
+  const days=(cur?.type||'').split(',').map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll('.wfh-day').forEach(cb=>cb.checked=days.includes(cb.value));
   document.getElementById('status-memo').value=cur?.memo||'';
   document.getElementById('modal-status').style.display='flex';
 }
+async function clearMemberStatus(){
+  const mid=document.getElementById('status-member-id').value;
+  const todayStr=fmt(new Date());
+  await db.from('member_statuses').delete().eq('member_id',mid).eq('date',todayStr);
+  closeModal('modal-status');showToast('초기화됐어요');
+}
 function openAddHandover(){
-  document.getElementById('hw-modal-title').textContent='인수인계 추가';
+  document.getElementById('hw-modal-title').textContent='할 일 추가';
   document.getElementById('hw-edit-id').value='';
   document.getElementById('hw-title').value='';
   document.getElementById('hw-from').value='지니';
-  document.getElementById('hw-to').value='이든';
+  document.getElementById('hw-channel').value='both';
   document.getElementById('hw-deadline').value='이번 주 내';
   document.getElementById('hw-status').value='pending';
   document.getElementById('hw-detail').value='';
   document.getElementById('hw-delete-btn').style.display='none';
+  document.getElementById('modal-handover').style.display='flex';
+}
+function editHandoverBtn(id){
+  const hw=handoverData.find(h=>h.id===id);if(!hw)return;
+  document.getElementById('hw-modal-title').textContent='할 일 수정';
+  document.getElementById('hw-edit-id').value=id;
+  document.getElementById('hw-title').value=hw.title;
+  document.getElementById('hw-from').value=hw.from_member;
+  document.getElementById('hw-channel').value=hw.channel||'both';
+  document.getElementById('hw-deadline').value=hw.deadline||'미정';
+  document.getElementById('hw-status').value=hw.status||'pending';
+  document.getElementById('hw-detail').value=hw.detail||'';
+  document.getElementById('hw-delete-btn').style.display='inline-flex';
   document.getElementById('modal-handover').style.display='flex';
 }
 
@@ -1656,26 +1685,43 @@ async function deleteExtraTask(id){await db.from('member_tasks').delete().eq('id
 
 async function saveMemberStatus(){
   const mid=document.getElementById('status-member-id').value;
-  const type=document.getElementById('status-type').value;
+  const days=[...document.querySelectorAll('.wfh-day:checked')].map(cb=>cb.value);
   const memo=document.getElementById('status-memo').value;
   const todayStr=fmt(new Date());
   await db.from('member_statuses').delete().eq('member_id',mid).eq('date',todayStr);
-  if(type){const{error}=await db.from('member_statuses').insert({member_id:mid,date:todayStr,type,memo});if(error){showToast('저장 실패: '+error.message);return;}}
-  closeModal('modal-status');showToast('상태 업데이트됐어요 ✓');
+  if(days.length){
+    const{error}=await db.from('member_statuses').insert({member_id:mid,date:todayStr,type:days.join(', '),memo});
+    if(error){showToast('저장 실패: '+error.message);return;}
+  }
+  closeModal('modal-status');showToast('재택근무일 업데이트됐어요 ✓');
 }
 
 async function saveHandover(){
   const id=document.getElementById('hw-edit-id').value;
   const title=document.getElementById('hw-title').value.trim();
-  if(!title){showToast('제목을 입력해주세요');return;}
-  const payload={title,from_member:document.getElementById('hw-from').value,to_member:document.getElementById('hw-to').value,deadline:document.getElementById('hw-deadline').value,status:document.getElementById('hw-status').value,detail:document.getElementById('hw-detail').value};
+  if(!title){showToast('할 일을 입력해주세요');return;}
+  const payload={
+    title,
+    from_member:document.getElementById('hw-from').value,
+    to_member:document.getElementById('hw-from').value, // 동일하게 유지 (DB 호환)
+    channel:document.getElementById('hw-channel').value,
+    deadline:document.getElementById('hw-deadline').value,
+    status:document.getElementById('hw-status').value,
+    detail:document.getElementById('hw-detail').value
+  };
   let error;
   if(id){({error}=await db.from('handovers').update(payload).eq('id',id));}
   else{({error}=await db.from('handovers').insert(payload));}
   if(error){showToast('저장 실패: '+error.message);return;}
   closeModal('modal-handover');showToast(id?'수정됐어요 ✓':'추가됐어요 ✓');
 }
-async function completeHandover(id){await db.from('handovers').update({status:'done'}).eq('id',id);showToast('완료 처리됐어요 ✓');}
+async function completeHandover(id){
+  const hw=handoverData.find(h=>h.id===id);
+  if(!hw)return;
+  const newStatus=hw.status==='done'?'pending':'done';
+  await db.from('handovers').update({status:newStatus}).eq('id',id);
+  showToast(newStatus==='done'?'완료 처리됐어요 ✓':'다시 진행 중으로 변경됐어요');
+}
 async function deleteHandoverBtn(id){if(!confirm('삭제할까요?'))return;await db.from('handovers').delete().eq('id',id);showToast('삭제됐어요');}
 async function deleteHandoverFromModal(){
   const id=document.getElementById('hw-edit-id').value;
