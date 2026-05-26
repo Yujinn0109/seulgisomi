@@ -278,7 +278,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">제이미</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">체리시</th>
           <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">메이</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">송혜인</th>
+          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">헤이디</th>
           <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:120px">촬영팀</th>
         </tr>
       </thead>
@@ -385,7 +385,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <select id="ev-member">
       <option value="jini">지니</option><option value="eden">이든</option>
       <option value="jamie">제이미</option><option value="cherish">체리시</option>
-      <option value="may">메이</option><option value="new">송혜인</option>
+      <option value="may">메이</option><option value="new">헤이디</option>
       <option value="maeve">메이브</option><option value="team">팀 전체</option>
     </select>
     <label>채널</label>
@@ -450,11 +450,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="송혜인" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 송혜인</label>
-        <div id="dates-송혜인" style="display:none;flex:1;gap:6px;align-items:center">
-          <input type="date" id="es-송혜인" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="헤이디" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 헤이디</label>
+        <div id="dates-헤이디" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-헤이디" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
           <span style="font-size:11px;color:#888">~</span>
-          <input type="date" id="ee-송혜인" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <input type="date" id="ee-헤이디" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -629,7 +629,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <div><label>담당자</label>
         <select id="hw-from">
           <option>지니</option><option>이든</option><option>제이미</option>
-          <option>체리시</option><option>메이</option><option>송혜인</option><option>메이브</option>
+          <option>체리시</option><option>메이</option><option>헤이디</option><option>메이브</option>
           <option>팀 전체</option>
         </select>
       </div>
@@ -698,8 +698,8 @@ const MEMBERS = {
   eden:   {label:'이든',      color:'#A3C1E2'},
   jamie:  {label:'제이미',    color:'#F76754'},
   cherish:{label:'체리시',    color:'#47B5A8'},
-  may:    {label:'메이',      color:'#DBC0E8'},
-  new:    {label:'송혜인',color:'#FBB28B'},
+  may:    {label:'메이',      color:'#FBB28B'},
+  new:    {label:'헤이디',color:'#DBC0E8'},
   maeve:  {label:'메이브',    color:'#B2DD9E'},
   team:   {label:'팀 전체',   color:'#534AB7'}
 };
@@ -817,8 +817,8 @@ function switchCalView(mode){
 function changeMonth(){} // 더 이상 사용 안 하지만 오류 방지용
 
 // ── 촬영 ──
-const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','송혜인'];
-const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#DBC0E8','송혜인':'#FBB28B'};
+const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디'];
+const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
 let shootFilter='all';
 
 function filterShoot(f,el){
@@ -1043,10 +1043,10 @@ function renderTimeline(){
   const monthStr=`${timelineYear}-${pad(timelineMonth+1)}`;
 
   // 담당자 순서
-  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','송혜인'];
+  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
   const memberColors={
     '지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754',
-    '체리시':'#47B5A8','메이':'#DBC0E8','송혜인':'#FBB28B'
+    '체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'
   };
 
   const grid=document.getElementById('timeline-grid');
@@ -1054,8 +1054,7 @@ function renderTimeline(){
 
   // 날짜 헤더
   const COL=24; // px per day
-  let html=`<div style="overflow-x:auto;padding-bottom:4px">`;
-  html+=`<div style="min-width:${120+days*COL}px">`;
+  let html=`<div style="min-width:${120+days*COL}px">`;
 
   // 헤더 행
   html+=`<div style="display:flex;margin-bottom:2px">`;
@@ -1152,7 +1151,7 @@ function renderTimeline(){
     <span style="font-size:10px;color:var(--color-text-secondary)">▲ 업로드일 &nbsp; ⭐ 세이브본</span>
   </div>`;
 
-  html+=`</div></div>`;
+  html+=`</div>`;
   grid.innerHTML=html;
 
   // 오늘이 이달이면 오늘 날짜로 자동 스크롤
@@ -1429,7 +1428,7 @@ function toggleMemberDates(cb){
   if(datesDiv) datesDiv.style.display=cb.checked?'flex':'none';
 }
 
-const UPLOAD_MEMBERS=['지니','이든','제이미','체리시','메이','송혜인','외주','미정'];
+const UPLOAD_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','외주','미정'];
 
 function openAddUpload(){
   document.getElementById('up-modal-title').textContent='업로드 일정 추가';
