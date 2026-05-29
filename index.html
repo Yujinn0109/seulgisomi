@@ -244,12 +244,9 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <div style="display:flex;align-items:center;gap:8px">
         <i class="ti ti-calendar-stats" style="font-size:16px;color:#7F77DD"></i>
         <span style="font-size:13px;font-weight:500">편집 타임라인</span>
+        <span id="timeline-range-label" style="font-size:11px;color:var(--color-text-secondary)"></span>
       </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm" onclick="changeTimelineMonth(-1)"><i class="ti ti-chevron-left"></i></button>
-        <span id="timeline-month-label" style="font-size:13px;font-weight:500;padding:4px 10px"></span>
-        <button class="btn btn-sm" onclick="changeTimelineMonth(1)"><i class="ti ti-chevron-right"></i></button>
-      </div>
+      <span style="font-size:11px;color:var(--color-text-secondary)">← 스크롤해서 전체 일정 확인</span>
     </div>
     <div id="timeline-scroll" style="padding:12px 16px;overflow-x:auto">
       <div id="timeline-grid"></div>
@@ -972,7 +969,6 @@ function filterUpload(f,el){
   renderUpload();
 }
 
-let timelineYear=new Date().getFullYear(), timelineMonth=new Date().getMonth();
 
 function renderUpload(){
   let data=uploadFilter==='all'?[...uploadData]:uploadData.filter(u=>u.channel===uploadFilter);
@@ -1025,54 +1021,100 @@ function renderUpload(){
   renderTimeline();
 }
 
-function changeTimelineMonth(d){
-  timelineMonth+=d;
-  if(timelineMonth>11){timelineMonth=0;timelineYear++;}
-  if(timelineMonth<0){timelineMonth=11;timelineYear--;}
-  renderTimeline();
-}
+
 
 function renderTimeline(){
-  const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const label=document.getElementById('timeline-month-label');
-  if(label) label.textContent=`${timelineYear}년 ${months[timelineMonth]}`;
-
-  const days=new Date(timelineYear,timelineMonth+1,0).getDate();
+  const COL=24;
   const today=new Date();
   const pad=n=>String(n).padStart(2,'0');
-  const monthStr=`${timelineYear}-${pad(timelineMonth+1)}`;
-
-  // 담당자 순서
   const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
-  const memberColors={
-    '지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754',
-    '체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'
-  };
-
+  const memberColors={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
   const grid=document.getElementById('timeline-grid');
   if(!grid) return;
 
-  // 날짜 헤더
-  const COL=24; // px per day
-  let html=`<div style="min-width:${120+days*COL}px">`;
+  // 전체 업로드 데이터에서 날짜 범위 자동 계산
+  const allDates=[];
+  uploadData.forEach(u=>{
+    const memberScheds=memberSchedulesData[u.id]||[];
+    if(memberScheds.length){
+      memberScheds.forEach(s=>{
+        if(s.edit_start) allDates.push(new Date(s.edit_start));
+        if(s.edit_end)   allDates.push(new Date(s.edit_end));
+      });
+    }
+    if(u.edit_start) allDates.push(new Date(u.edit_start));
+    if(u.edit_end)   allDates.push(new Date(u.edit_end));
+    if(u.date)       allDates.push(new Date(u.date));
+  });
 
-  // 헤더 행
-  html+=`<div style="display:flex;margin-bottom:2px">`;
+  if(!allDates.length){
+    grid.innerHTML=`<div style="padding:16px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 일정이 없어요</div>`;
+    return;
+  }
+
+  // 범위: 가장 이른 날 ~ 가장 늦은 날 (월 단위로 확장)
+  const minDate=new Date(Math.min(...allDates));
+  const maxDate=new Date(Math.max(...allDates));
+  // 시작: 해당 월의 1일, 끝: 해당 월의 마지막 날
+  const startDate=new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const endDate=new Date(maxDate.getFullYear(), maxDate.getMonth()+1, 0);
+
+  // 총 날짜 수
+  const totalDays=Math.round((endDate-startDate)/(1000*60*60*24))+1;
+  const totalWidth=120+totalDays*COL;
+
+  // 범위 라벨 업데이트
+  const rangeLabel=document.getElementById('timeline-range-label');
+  if(rangeLabel){
+    const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    rangeLabel.textContent=`${startDate.getFullYear()}년 ${months[startDate.getMonth()]} ~ ${endDate.getFullYear()}년 ${months[endDate.getMonth()]}`;
+  }
+
+  // 날짜 → 픽셀 오프셋 계산 함수
+  const dateToLeft=dateStr=>{
+    const d=new Date(dateStr);
+    const diff=Math.round((d-startDate)/(1000*60*60*24));
+    return diff*COL;
+  };
+
+  let html=`<div style="min-width:${totalWidth}px">`;
+
+  // ── 헤더: 월 라벨 + 날짜 숫자 ──
+  // 월 라벨 행
+  html+=`<div style="display:flex;margin-bottom:1px">`;
   html+=`<div style="width:120px;flex-shrink:0"></div>`;
-  for(let d=1;d<=days;d++){
-    const ds=`${monthStr}-${pad(d)}`;
-    const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
-    const dow=new Date(timelineYear, timelineMonth, d).getDay();
-    const isSun=dow===0, isSat=dow===6;
-    html+=`<div style="width:${COL}px;text-align:center;font-size:9px;font-weight:${isToday?700:400};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};flex-shrink:0;${isToday?'background:#7F77DD18;border-radius:2px':''}">${d}</div>`;
+  let d=new Date(startDate);
+  while(d<=endDate){
+    const yr=d.getFullYear(), mo=d.getMonth();
+    const daysInMonth=new Date(yr,mo+1,0).getDate();
+    // 이달에서 실제 렌더되는 날 수 계산
+    const monthStart=new Date(yr,mo,1);
+    const monthEnd=new Date(yr,mo+1,0);
+    const renderStart=new Date(Math.max(monthStart,startDate));
+    const renderEnd=new Date(Math.min(monthEnd,endDate));
+    const renderDays=Math.round((renderEnd-renderStart)/(1000*60*60*24))+1;
+    const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    html+=`<div style="width:${renderDays*COL}px;flex-shrink:0;font-size:10px;font-weight:600;color:var(--color-text-secondary);border-left:1px solid var(--color-border-tertiary);padding-left:4px;background:var(--color-background-secondary)">${yr}년 ${months[mo]}</div>`;
+    d=new Date(yr,mo+1,1);
   }
   html+=`</div>`;
 
-  // 담당자별 행
+  // 날짜 숫자 행
+  html+=`<div style="display:flex;margin-bottom:4px">`;
+  html+=`<div style="width:120px;flex-shrink:0"></div>`;
+  for(let i=0;i<totalDays;i++){
+    const cur=new Date(startDate.getTime()+i*86400000);
+    const day=cur.getDate();
+    const dow=cur.getDay();
+    const isToday=cur.toDateString()===today.toDateString();
+    const isSun=dow===0, isSat=dow===6;
+    html+=`<div style="width:${COL}px;text-align:center;font-size:9px;font-weight:${isToday?700:400};color:${isToday?'#7F77DD':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};flex-shrink:0;${isToday?'background:#7F77DD18;border-radius:2px':''}">${day===1||i===0?day:day}</div>`;
+  }
+  html+=`</div>`;
+
+  // ── 담당자별 행 ──
   TIMELINE_MEMBERS.forEach(name=>{
     const color=memberColors[name]||'#888';
-
-    // 이 담당자가 포함된 업로드 항목
     const tasks=uploadData.filter(u=>{
       const members=(u.member||'').split(',').map(s=>s.trim());
       return members.includes(name);
@@ -1084,22 +1126,25 @@ function renderTimeline(){
       <span style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
     </div>`;
 
-    // 날짜 셀들
-    html+=`<div style="position:relative;height:22px;flex:1;display:flex">`;
-    for(let d=1;d<=days;d++){
-      const ds=`${monthStr}-${pad(d)}`;
-      const isToday=today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth&&today.getDate()===d;
-      const dow=new Date(timelineYear, timelineMonth, d).getDay();
+    html+=`<div style="position:relative;height:22px;display:flex;flex:1">`;
+    // 셀 배경
+    for(let i=0;i<totalDays;i++){
+      const cur=new Date(startDate.getTime()+i*86400000);
+      const dow=cur.getDay();
       const isWeekend=dow===0||dow===6;
-      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);background:${isToday?'#7F77DD10':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
+      const isToday=cur.toDateString()===today.toDateString();
+      // 월 경계선
+      const isMonthStart=cur.getDate()===1&&i>0;
+      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);${isMonthStart?'border-left:1px solid var(--color-border-secondary);':''}background:${isToday?'#7F77DD10':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
     }
+
     // 오늘 세로선
-    if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
-      const todayLeft=(today.getDate()-1)*COL+COL/2;
+    if(today>=startDate&&today<=endDate){
+      const todayLeft=dateToLeft(pad(today.getFullYear())+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate()))+COL/2;
       html+=`<div style="position:absolute;left:${todayLeft}px;top:0;bottom:0;width:1.5px;background:#7F77DD55;pointer-events:none;z-index:3"></div>`;
     }
 
-      // 업무 바 오버레이 — 멤버별 개인 스케줄 우선 사용
+    // 바 렌더
     tasks.forEach(u=>{
       const barColor=u.channel==='seulgi'?'#B45309':'#DB2777';
       const memberScheds=memberSchedulesData[u.id]||[];
@@ -1108,36 +1153,39 @@ function renderTimeline(){
       const endStr=personalSched?.edit_end||u.edit_end||u.date;
       if(!startStr) return;
 
-      const start=new Date(Math.max(new Date(startStr),new Date(`${monthStr}-01`)));
-      const end=new Date(Math.min(new Date(endStr),new Date(timelineYear,timelineMonth+1,0)));
-      if(start>end) return;
+      const barStart=new Date(Math.max(new Date(startStr),startDate));
+      const barEnd=new Date(Math.min(new Date(endStr),endDate));
+      if(barStart>barEnd) return;
 
-      const startDay=start.getDate();
-      const endDay=end.getDate();
-      const left=(startDay-1)*COL;
-      const width=(endDay-startDay+1)*COL;
-
-      const isUploadInMonth=u.date&&u.date.startsWith(monthStr);
-      const uploadDay=isUploadInMonth?new Date(u.date).getDate():null;
-
+      const barStartStr=`${barStart.getFullYear()}-${pad(barStart.getMonth()+1)}-${pad(barStart.getDate())}`;
+      const barEndStr=`${barEnd.getFullYear()}-${pad(barEnd.getMonth()+1)}-${pad(barEnd.getDate())}`;
+      const left=dateToLeft(barStartStr);
+      const width=dateToLeft(barEndStr)-left+COL;
       const titleAttr=u.title+(personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})`:'');
 
       html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${titleAttr}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
         <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
       </div>`;
 
-      // 주말 세로 스트라이프 오버레이 (바 위에 덮기)
-      for(let d=startDay;d<=endDay;d++){
-        const dow=new Date(timelineYear, timelineMonth, d).getDay();
-        if(dow===0||dow===6){
-          const stripeLeft=(d-1)*COL;
-          html+=`<div style="position:absolute;left:${stripeLeft}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
+      // 주말 스트라이프
+      const days2=Math.round((barEnd-barStart)/(1000*60*60*24))+1;
+      for(let i2=0;i2<days2;i2++){
+        const cur2=new Date(barStart.getTime()+i2*86400000);
+        const dow2=cur2.getDay();
+        if(dow2===0||dow2===6){
+          const dStr=`${cur2.getFullYear()}-${pad(cur2.getMonth()+1)}-${pad(cur2.getDate())}`;
+          html+=`<div style="position:absolute;left:${dateToLeft(dStr)}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
         }
       }
 
-      if(uploadDay&&uploadDay>=1&&uploadDay<=days){
-        const uploadLeft=(uploadDay-1)*COL+COL/2-4;
-        html+=`<div style="position:absolute;left:${uploadLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700;z-index:2" title="업로드 ${u.date}">▲</div>`;
+      // 업로드일 마커
+      if(u.date){
+        const uDate=new Date(u.date);
+        if(uDate>=startDate&&uDate<=endDate){
+          const uStr=u.date;
+          const uLeft=dateToLeft(uStr)+COL/2-4;
+          html+=`<div style="position:absolute;left:${uLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700;z-index:2">▲</div>`;
+        }
       }
     });
 
@@ -1154,13 +1202,12 @@ function renderTimeline(){
   html+=`</div>`;
   grid.innerHTML=html;
 
-  // 오늘이 이달이면 오늘 날짜로 자동 스크롤
-  if(today.getFullYear()===timelineYear&&today.getMonth()===timelineMonth){
-    const scrollEl=document.getElementById('timeline-scroll');
-    if(scrollEl){
-      const scrollLeft=(today.getDate()-4)*COL;
-      setTimeout(()=>scrollEl.scrollLeft=Math.max(0,scrollLeft),50);
-    }
+  // 오늘 날짜로 자동 스크롤 (왼쪽에서 4일 여백)
+  const scrollEl=document.getElementById('timeline-scroll');
+  if(scrollEl&&today>=startDate){
+    const todayStr=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    const scrollLeft=Math.max(0, dateToLeft(todayStr)-4*COL);
+    setTimeout(()=>scrollEl.scrollLeft=scrollLeft, 50);
   }
 }
 
