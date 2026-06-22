@@ -137,6 +137,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="sidebar-logo"><h1>팀 대시보드</h1><p>슬기 &amp; 소미</p></div>
   <div class="nav-item active" onclick="showPage('home',this)"><i class="ti ti-home"></i> 홈</div>
   <div class="nav-item" onclick="showPage('calendar',this)"><i class="ti ti-calendar"></i> 캘린더</div>
+  <div class="nav-item" onclick="showPage('meeting',this)"><i class="ti ti-clipboard-text"></i> 회의</div>
   <div class="nav-item" onclick="showPage('upload',this)"><i class="ti ti-upload"></i> 업로드 스케줄</div>
   <div class="nav-item" onclick="showPage('shoot',this)"><i class="ti ti-camera"></i> 촬영</div>
   <div class="nav-item" onclick="showPage('ad',this)"><i class="ti ti-speakerphone"></i> 광고</div>
@@ -390,6 +391,57 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <button class="btn btn-danger btn-sm" id="ad-delete-btn" style="display:none;margin-right:auto" onclick="deleteAdFromModal()">삭제</button>
       <button class="btn" onclick="closeModal('modal-ad')">취소</button>
       <button class="btn btn-primary" onclick="saveAd()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEETING -->
+<div id="page-meeting" class="page">
+  <!-- 월별 뷰 -->
+  <div id="meeting-months-view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 class="page-title" style="margin:0">회의</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm" onclick="changeMeetingYear(-1)"><i class="ti ti-chevron-left"></i></button>
+        <span id="meeting-year-label" style="font-size:13px;font-weight:500;padding:4px 8px"></span>
+        <button class="btn btn-sm" onclick="changeMeetingYear(1)"><i class="ti ti-chevron-right"></i></button>
+      </div>
+    </div>
+    <div id="meeting-months-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+  </div>
+
+  <!-- 상세 뷰 -->
+  <div id="meeting-detail-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <button class="btn btn-sm" onclick="backToMeetingMonths()">← 뒤로</button>
+      <span id="meeting-detail-title" style="font-size:18px;font-weight:500"></span>
+    </div>
+    <div id="meeting-weeks-tabs" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap"></div>
+    <div id="meeting-content"></div>
+  </div>
+</div>
+
+<!-- 회의 항목 추가/수정 모달 -->
+<div id="modal-meeting-item" class="modal-overlay" style="display:none" onclick="closeModal('modal-meeting-item',event)">
+  <div class="modal" style="width:460px">
+    <h3 id="mi-modal-title">항목 추가</h3>
+    <input type="hidden" id="mi-edit-id">
+    <input type="hidden" id="mi-meeting-id">
+    <input type="hidden" id="mi-section">
+    <label>형식</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="mi-type" value="bullet" checked style="width:auto;margin:0"> • 불릿 (아이디어)</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="mi-type" value="checkbox" style="width:auto;margin:0"> ☐ 체크박스 (할일)</label>
+    </div>
+    <label>내용</label>
+    <textarea id="mi-content" placeholder="내용 입력 (@ 입력하면 멤버 멘션)" style="height:70px" oninput="handleMentionInput(this)"></textarea>
+    <div id="mi-mention-dropdown" style="display:none;position:relative"></div>
+    <label>멘션 <span style="font-weight:400;color:#999">(클릭해서 추가)</span></label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="mi-mention-chips"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger btn-sm" id="mi-delete-btn" style="display:none;margin-right:auto" onclick="deleteMeetingItem()">삭제</button>
+      <button class="btn" onclick="closeModal('modal-meeting-item')">취소</button>
+      <button class="btn btn-primary" onclick="saveMeetingItem()">저장</button>
     </div>
   </div>
 </div>
@@ -788,7 +840,7 @@ const statusMap = {
   shoot:  {label:'촬영 완료',   cls:'status-shoot'}
 };
 
-let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[],adData=[],adKpiData=[];
+let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[],adData=[],adKpiData=[],meetingData=[],meetingItemData=[];
 let memberExtraTasks={}, memberStatuses={}, memberSchedulesData={};
 let gcalEvents=[];
 let curYear=new Date().getFullYear(), curMonth=new Date().getMonth();
@@ -809,7 +861,7 @@ function execFontSize(s){document.execCommand('fontSize',false,s);document.getEl
 async function loadData(){
   setLoading(true);
   try{
-    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR,adR,kpR]=await Promise.all([
+    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR,adR,kpR,mtR,miR]=await Promise.all([
       db.from('events').select('*').order('date'),
       db.from('uploads').select('*').order('date'),
       db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
@@ -822,12 +874,15 @@ async function loadData(){
       db.from('shoots').select('*'),
       db.from('shoot_dates').select('*').order('shoot_date'),
       db.from('ads').select('*').order('created_at',{ascending:false}),
-      db.from('ad_kpi').select('*')
+      db.from('ad_kpi').select('*'),
+      db.from('meetings').select('*').order('created_at'),
+      db.from('meeting_items').select('*').order('sort_order')
     ]);
     events=evR.data||[]; uploadData=upR.data||[]; noticeData=noR.data||[];
     resourceData=reR.data||[]; memoData=moR.data||[]; handoverData=hwR.data||[];
     shootData=shR.data||[]; shootDatesData=sdR.data||[];
     adData=adR.data||[]; adKpiData=kpR.data||[];
+    meetingData=mtR.data||[]; meetingItemData=miR.data||[];
     // 업로드별 멤버 스케줄 맵핑
     memberSchedulesData={};
     (msR.data||[]).forEach(s=>{
@@ -880,7 +935,7 @@ async function syncGoogleCalendar(){
 }
 
 // ── 전체 렌더 ──
-function renderAll(){renderUpload();renderHome();renderNotices();renderResources();renderMemos();renderHandovers();renderShoot();renderAd();}
+function renderAll(){renderUpload();renderHome();renderNotices();renderResources();renderMemos();renderHandovers();renderShoot();renderAd();renderMeeting();}
 
 function switchCalView(mode){
   const base='https://calendar.google.com/calendar/embed?src=ep.zinny%40gmail.com&src=5b4e1758e3f442eb16aa8a8c4cceb0c70622185b1421e7eb138fcc121bd307da%40group.calendar.google.com&src=dce5a03ba7bf72f94b36d42862b5bfbae156cb000322e1e02fa4846f76ada0cd%40group.calendar.google.com&src=38140e2be6d125a8518d2c88c8dd825ad06d98b583d94a2d443904f5578a5467%40group.calendar.google.com&src=f40fcd9811932b103020d0ed567189ace37c4cf4960c87ad4131df6d73572e41%40group.calendar.google.com&src=d6f45f65bdf009093bcfb7e1f6a6c37b9168c497c094ed7d12308ae141148854%40group.calendar.google.com&src=52e4367e3eba394da2fd7b0e06dd29ebe8bc5ce06d711e61cef2876cf852c7d3%40group.calendar.google.com&ctz=Asia%2FSeoul&hl=ko&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=1&showTz=0';
@@ -1037,6 +1092,239 @@ async function saveShoot(){
 
   closeModal('modal-shoot');
   showToast('저장됐어요 ✓');
+}
+
+// ── 회의 ──
+let meetingYear=new Date().getFullYear();
+let curMeetingId=null, curMeetingWeek=1;
+const MEETING_SECTIONS=[
+  {key:'issue', label:'📌 월별 이슈', color:'#BA7517', bg:'#FAEEDA'},
+  {key:'notice',label:'📢 공지사항', color:'#534AB7', bg:'#EEEDFE'},
+  {key:'seulgi',label:'슬기', color:'#B45309', bg:'#FFF8E1', badge:'badge-seulgi'},
+  {key:'somi',  label:'소미', color:'#DB2777', bg:'#FDE8F0', badge:'badge-somi'},
+];
+const MENTION_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
+const MEMBER_COLOR_MAP={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
+let curMentions=[];
+
+function changeMeetingYear(d){ meetingYear+=d; renderMeeting(); }
+
+function renderMeeting(){
+  const label=document.getElementById('meeting-year-label');
+  if(label) label.textContent=`${meetingYear}년`;
+  const grid=document.getElementById('meeting-months-grid');
+  if(!grid) return;
+
+  // 상세 뷰가 열려있으면 그것도 갱신
+  if(curMeetingId){ renderMeetingDetail(); }
+
+  let html='';
+  for(let m=1;m<=12;m++){
+    const monthMeetings=meetingData.filter(mt=>mt.year===meetingYear&&mt.month===m);
+    const count=monthMeetings.length;
+    const isCurrent=meetingYear===new Date().getFullYear()&&m===new Date().getMonth()+1;
+    html+=`<div onclick="openMeetingMonth(${m})" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:18px 16px;cursor:pointer;transition:all .15s;text-align:center;${count===0?'opacity:.5':''}" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:22px;font-weight:600;${isCurrent?'color:#7F77DD':''}">${m}월</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${count>0?count+'개 회의록':'기록 없음'}</div>
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+let curMeetingMonth=null;
+function openMeetingMonth(m){
+  curMeetingMonth=m;
+  curMeetingWeek=1;
+  document.getElementById('meeting-months-view').style.display='none';
+  document.getElementById('meeting-detail-view').style.display='block';
+  document.getElementById('meeting-detail-title').textContent=`${meetingYear}년 ${m}월 회의록`;
+  renderMeetingDetail();
+}
+
+function backToMeetingMonths(){
+  curMeetingId=null; curMeetingMonth=null;
+  document.getElementById('meeting-detail-view').style.display='none';
+  document.getElementById('meeting-months-view').style.display='block';
+  renderMeeting();
+}
+
+function renderMeetingDetail(){
+  if(curMeetingMonth===null) return;
+  // 이 달의 주차별 회의록
+  const monthMeetings=meetingData.filter(mt=>mt.year===meetingYear&&mt.month===curMeetingMonth);
+  const weeks=[...new Set(monthMeetings.map(mt=>mt.week))].sort((a,b)=>a-b);
+  // 최소 1주차는 보이게
+  if(!weeks.includes(curMeetingWeek)&&weeks.length) curMeetingWeek=weeks[0];
+
+  // 주차 탭
+  const tabs=document.getElementById('meeting-weeks-tabs');
+  let tabHtml='';
+  const allWeeks=weeks.length?weeks:[1];
+  allWeeks.forEach(w=>{
+    const active=w===curMeetingWeek;
+    tabHtml+=`<button onclick="selectMeetingWeek(${w})" style="padding:5px 14px;border-radius:8px;border:${active?'none':'0.5px solid var(--color-border-secondary)'};background:${active?'#7F77DD':'var(--color-background-primary)'};color:${active?'#fff':'var(--color-text-primary)'};font-size:12px;cursor:pointer;font-weight:${active?'500':'400'}">${w}주차</button>`;
+  });
+  tabHtml+=`<button onclick="addMeetingWeek()" style="padding:5px 12px;border-radius:8px;border:0.5px dashed var(--color-border-secondary);background:none;font-size:12px;cursor:pointer;color:var(--color-text-secondary)">+ 주차</button>`;
+  tabs.innerHTML=tabHtml;
+
+  // 현재 주차 회의록 찾기 (없으면 안내)
+  const meeting=monthMeetings.find(mt=>mt.week===curMeetingWeek);
+  curMeetingId=meeting?.id||null;
+
+  const content=document.getElementById('meeting-content');
+  if(!meeting){
+    content.innerHTML=`<div style="padding:30px;text-align:center;font-size:13px;color:var(--color-text-secondary)">
+      ${curMeetingWeek}주차 회의록이 없어요<br><br>
+      <button class="btn btn-primary btn-sm" onclick="createMeeting(${curMeetingWeek})">+ ${curMeetingWeek}주차 회의록 만들기</button>
+    </div>`;
+    return;
+  }
+
+  const dateStr=new Date(meeting.created_at).toLocaleDateString('ko-KR');
+  let html=`<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">${dateStr} 작성${meeting.title?' · '+meeting.title:''}</div>`;
+  html+=`<div style="display:flex;flex-direction:column;gap:16px">`;
+
+  MEETING_SECTIONS.forEach(sec=>{
+    const items=meetingItemData.filter(it=>it.meeting_id===meeting.id&&it.section===sec.key).sort((a,b)=>a.sort_order-b.sort_order);
+    const headHtml=sec.badge
+      ? `<span class="badge ${sec.badge}">${sec.label}</span>`
+      : `<span style="font-size:12px;font-weight:600;color:${sec.color}">${sec.label}</span>`;
+    html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:5px;border-bottom:1.5px solid ${sec.bg}">${headHtml}</div>
+      <div style="display:flex;flex-direction:column;gap:2px">`;
+
+    items.forEach(it=>{
+      const mentionsHtml=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean).map(m=>{
+        const c=MEMBER_COLOR_MAP[m]||'#534AB7';
+        return `<span style="background:${c}22;color:${c};padding:0 5px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap">@${m}</span>`;
+      }).join(' ');
+      const contentHtml=`${it.content}${mentionsHtml?' '+mentionsHtml:''}`;
+      if(it.item_type==='checkbox'){
+        html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5;group" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
+          <span onclick="toggleMeetingCheck('${it.id}',${!it.checked})" style="width:15px;height:15px;border:1.5px solid ${it.checked?'#1D9E75':'#bbb'};border-radius:4px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${it.checked?'#1D9E75':'transparent'}">${it.checked?'<span style="color:#fff;font-size:10px">✓</span>':''}</span>
+          <span style="flex:1;${it.checked?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${contentHtml}</span>
+          <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
+            <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
+          </span>
+        </div>`;
+      } else {
+        html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
+          <span style="flex-shrink:0;color:var(--color-text-secondary);margin-top:1px">•</span>
+          <span style="flex:1">${contentHtml}</span>
+          <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
+            <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
+          </span>
+        </div>`;
+      }
+    });
+
+    html+=`<button onclick="openAddMeetingItem('${meeting.id}','${sec.key}')" style="align-self:flex-start;background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:4px 0;margin-top:2px">+ 항목 추가</button>`;
+    html+=`</div></div>`;
+  });
+
+  html+=`</div>`;
+  content.innerHTML=html;
+}
+
+function selectMeetingWeek(w){ curMeetingWeek=w; renderMeetingDetail(); }
+
+async function addMeetingWeek(){
+  const monthMeetings=meetingData.filter(mt=>mt.year===meetingYear&&mt.month===curMeetingMonth);
+  const maxWeek=monthMeetings.length?Math.max(...monthMeetings.map(mt=>mt.week)):0;
+  const newWeek=maxWeek+1;
+  await createMeeting(newWeek);
+}
+
+async function createMeeting(week){
+  const{data,error}=await db.from('meetings').insert({year:meetingYear,month:curMeetingMonth,week,title:''}).select().single();
+  if(error){showToast('생성 실패: '+error.message);return;}
+  curMeetingWeek=week;
+  showToast(`${week}주차 회의록이 생성됐어요 ✓`);
+}
+
+async function toggleMeetingCheck(id,checked){
+  await db.from('meeting_items').update({checked}).eq('id',id);
+}
+
+function openAddMeetingItem(meetingId,section){
+  document.getElementById('mi-modal-title').textContent='항목 추가';
+  document.getElementById('mi-edit-id').value='';
+  document.getElementById('mi-meeting-id').value=meetingId;
+  document.getElementById('mi-section').value=section;
+  document.querySelector('input[name="mi-type"][value="bullet"]').checked=true;
+  document.getElementById('mi-content').value='';
+  curMentions=[];
+  renderMentionChips();
+  document.getElementById('mi-delete-btn').style.display='none';
+  document.getElementById('modal-meeting-item').style.display='flex';
+}
+
+function editMeetingItem(id){
+  const it=meetingItemData.find(i=>i.id===id);if(!it)return;
+  document.getElementById('mi-modal-title').textContent='항목 수정';
+  document.getElementById('mi-edit-id').value=id;
+  document.getElementById('mi-meeting-id').value=it.meeting_id;
+  document.getElementById('mi-section').value=it.section;
+  document.querySelector(`input[name="mi-type"][value="${it.item_type}"]`).checked=true;
+  document.getElementById('mi-content').value=it.content;
+  curMentions=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean);
+  renderMentionChips();
+  document.getElementById('mi-delete-btn').style.display='inline-flex';
+  document.getElementById('modal-meeting-item').style.display='flex';
+}
+
+function renderMentionChips(){
+  const wrap=document.getElementById('mi-mention-chips');
+  wrap.innerHTML=MENTION_MEMBERS.map(m=>{
+    const on=curMentions.includes(m);
+    const c=MEMBER_COLOR_MAP[m];
+    return `<span onclick="toggleMention('${m}')" style="cursor:pointer;padding:3px 9px;border-radius:14px;font-size:12px;font-weight:500;border:1.5px solid ${on?c:'#ddd'};background:${on?c+'22':'#fff'};color:${on?c:'var(--color-text-secondary)'}">@${m}</span>`;
+  }).join('');
+}
+
+function toggleMention(m){
+  if(curMentions.includes(m)) curMentions=curMentions.filter(x=>x!==m);
+  else curMentions.push(m);
+  renderMentionChips();
+}
+
+function handleMentionInput(ta){
+  // @멤버명 자동 인식해서 칩에 반영
+  const text=ta.value;
+  MENTION_MEMBERS.forEach(m=>{
+    if(text.includes('@'+m)&&!curMentions.includes(m)){
+      curMentions.push(m);
+      ta.value=text.replace('@'+m,'').replace(/\s+$/,'');
+      renderMentionChips();
+    }
+  });
+}
+
+async function saveMeetingItem(){
+  const id=document.getElementById('mi-edit-id').value;
+  const meetingId=document.getElementById('mi-meeting-id').value;
+  const section=document.getElementById('mi-section').value;
+  const content=document.getElementById('mi-content').value.trim();
+  const itemType=document.querySelector('input[name="mi-type"]:checked').value;
+  if(!content){showToast('내용을 입력해주세요');return;}
+
+  const payload={meeting_id:meetingId,section,item_type:itemType,content,mentions:curMentions.join(',')};
+  let error;
+  if(id){({error}=await db.from('meeting_items').update(payload).eq('id',id));}
+  else{
+    const sameItems=meetingItemData.filter(it=>it.meeting_id===meetingId&&it.section===section);
+    payload.sort_order=sameItems.length;
+    ({error}=await db.from('meeting_items').insert(payload));
+  }
+  if(error){showToast('저장 실패: '+error.message);return;}
+  closeModal('modal-meeting-item');showToast(id?'수정됐어요 ✓':'추가됐어요 ✓');
+}
+
+async function deleteMeetingItem(){
+  const id=document.getElementById('mi-edit-id').value;
+  if(!id||!confirm('삭제할까요?'))return;
+  await db.from('meeting_items').delete().eq('id',id);
+  closeModal('modal-meeting-item');showToast('삭제됐어요');
 }
 
 // ── 광고 ──
@@ -1680,10 +1968,20 @@ function renderHome(){
     });
   });
 
+  // 회의록에서 멘션된 미완료 체크박스 할일 모으기
+  const mentionTaskMap={};
+  meetingItemData.filter(it=>it.item_type==='checkbox'&&!it.checked&&it.mentions).forEach(it=>{
+    it.mentions.split(',').map(s=>s.trim()).filter(Boolean).forEach(name=>{
+      const mid=Object.entries(MEMBERS).find(([k,v])=>v.label===name)?.[0];
+      if(mid){if(!mentionTaskMap[mid])mentionTaskMap[mid]=[];mentionTaskMap[mid].push(it);}
+    });
+  });
+
   document.getElementById('member-tasks').innerHTML=MEMBER_ORDER.map(mid=>{
     const m=MEMBERS[mid];
     const uTasks=uploadTaskMap[mid]||[];
     const eTasks=memberExtraTasks[mid]||[];
+    const mTasks=mentionTaskMap[mid]||[];
     const st=memberStatuses[mid];
     const taskTags=[
       ...uTasks.slice(0,2).map(t=>{
@@ -1693,11 +1991,16 @@ function renderHome(){
           <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">${t.title}</span>
         </div>`;
       }),
+      ...mTasks.map(t=>`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(127,119,221,.3)">
+        <span style="font-size:10px;flex-shrink:0">📋</span>
+        <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</span>
+      </div>`),
       ...eTasks.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(0,0,0,.08)">
         <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">• ${t.content}</span>
         <button onclick="deleteExtraTask('${t.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:10px;padding:0;flex-shrink:0">✕</button>
       </div>`)
     ].join('');
+    const hasAny=uTasks.length||eTasks.length||mTasks.length;
     return `<div class="member-card" style="background:${m.color}18;border:0.5px solid ${m.color}44">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
         <div style="width:34px;height:34px;border-radius:50%;background:${m.color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">${m.label.slice(0,2)}</div>
@@ -1708,7 +2011,7 @@ function renderHome(){
         <button onclick="openStatusModal('${mid}')" style="background:rgba(255,255,255,.7);border:0.5px solid ${m.color}66;cursor:pointer;color:${m.color};font-size:10px;padding:2px 7px;border-radius:4px;flex-shrink:0">상태</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-        ${uTasks.length===0&&eTasks.length===0?`<div style="font-size:11px;color:var(--color-text-secondary)">현재 담당 업무 없음</div>`:taskTags}
+        ${!hasAny?`<div style="font-size:11px;color:var(--color-text-secondary)">현재 담당 업무 없음</div>`:taskTags}
       </div>
       <button class="add-task-btn" onclick="openTaskModal('${mid}')" style="color:${m.color};border-color:${m.color}88">+ 업무 추가</button>
     </div>`;
