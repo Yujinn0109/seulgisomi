@@ -327,14 +327,16 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <div>
       <div style="margin-bottom:10px"><span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span></div>
       <div id="ad-list-somi" style="display:flex;flex-direction:column;gap:6px"></div>
-      <div id="ad-kpi-somi" style="margin-top:10px"></div>
     </div>
     <!-- 슬기 -->
     <div>
       <div style="margin-bottom:10px"><span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span></div>
       <div id="ad-list-seulgi" style="display:flex;flex-direction:column;gap:6px"></div>
-      <div id="ad-kpi-seulgi" style="margin-top:10px"></div>
     </div>
+  </div>
+  <!-- KPI 통합 -->
+  <div style="margin-top:20px;border-top:1px solid var(--color-border-secondary);padding-top:16px">
+    <div id="ad-kpi-wrap"></div>
   </div>
 </div>
 
@@ -350,6 +352,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="BDC">BDC</option>
       <option value="기획PPL">기획PPL</option>
       <option value="단순PPL">단순PPL</option>
+      <option value="쇼츠">쇼츠</option>
     </select>
     <label>브랜드명</label>
     <input type="text" id="ad-brand" placeholder="예: 메디큐브">
@@ -878,7 +881,6 @@ async function syncGoogleCalendar(){
 
 // ── 전체 렌더 ──
 function renderAll(){renderUpload();renderHome();renderNotices();renderResources();renderMemos();renderHandovers();renderShoot();renderAd();}
-function renderCalendar(){} // iframe 방식으로 변경되어 사용 안 함
 
 function switchCalView(mode){
   const base='https://calendar.google.com/calendar/embed?src=ep.zinny%40gmail.com&src=5b4e1758e3f442eb16aa8a8c4cceb0c70622185b1421e7eb138fcc121bd307da%40group.calendar.google.com&src=dce5a03ba7bf72f94b36d42862b5bfbae156cb000322e1e02fa4846f76ada0cd%40group.calendar.google.com&src=38140e2be6d125a8518d2c88c8dd825ad06d98b583d94a2d443904f5578a5467%40group.calendar.google.com&src=f40fcd9811932b103020d0ed567189ace37c4cf4960c87ad4131df6d73572e41%40group.calendar.google.com&src=d6f45f65bdf009093bcfb7e1f6a6c37b9168c497c094ed7d12308ae141148854%40group.calendar.google.com&src=52e4367e3eba394da2fd7b0e06dd29ebe8bc5ce06d711e61cef2876cf852c7d3%40group.calendar.google.com&ctz=Asia%2FSeoul&hl=ko&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=1&showTz=0';
@@ -890,7 +892,6 @@ function switchCalView(mode){
     b.style.borderColor=m===mode?'#7F77DD':'';
   });
 }
-function changeMonth(){} // 더 이상 사용 안 하지만 오류 방지용
 
 // ── 촬영 ──
 const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디'];
@@ -1051,6 +1052,7 @@ const AD_TYPE_STYLE={
   BDC:    {bg:'#EEEDFE',color:'#3C3489'},
   기획PPL:{bg:'#E1F5EE',color:'#085041'},
   단순PPL:{bg:'#FAEEDA',color:'#633806'},
+  쇼츠:   {bg:'#F5E6FF',color:'#6B21A8'},
 };
 
 function fmtMoney(n){
@@ -1066,7 +1068,8 @@ function fmtDatetime(str){
 
 function renderAd(){
   ['somi','seulgi'].forEach(ch=>{
-    const list=adData.filter(a=>a.channel===ch);
+    // 오름차순 (created_at 오래된 것이 위, 최신이 아래)
+    const list=[...adData.filter(a=>a.channel===ch)].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
     const chColor=ch==='seulgi'?'#B45309':'#DB2777';
     const el=document.getElementById('ad-list-'+ch);
     if(!el) return;
@@ -1075,11 +1078,15 @@ function renderAd(){
       const st=AD_STATUS[a.status]||{label:a.status,bg:'#eee',color:'#555'};
       const ty=AD_TYPE_STYLE[a.type]||{bg:'#eee',color:'#555'};
       const isDone=a.status==='done';
-      const hasDetail=a.product||a.member||a.plan_date||a.rough_date||a.final_date||a.memo||a.amount;
+      // 날짜: created_at에서 년-월 추출
+      const dateLabel=a.created_at?a.created_at.slice(0,7):'';
       return `<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${chColor};border-radius:var(--border-radius-lg);overflow:hidden;${isDone?'opacity:.7':''}">
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none" onclick="toggleAd('ad-body-${a.id}','ad-ic-${a.id}')">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none" onclick="toggleAd('ad-body-${a.id}','ad-ic-${a.id}')">
           <span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500;flex-shrink:0;background:${ty.bg};color:${ty.color}">${a.type}</span>
-          <span style="font-size:13px;font-weight:500;flex:1;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${a.brand}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${a.brand}</div>
+            ${dateLabel?`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px">${dateLabel}</div>`:''}
+          </div>
           <span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap;background:${st.bg};color:${st.color}">${st.label}</span>
           <i class="ti ti-chevron-down" id="ad-ic-${a.id}" style="font-size:14px;color:var(--color-text-secondary);transition:transform .2s;flex-shrink:0"></i>
         </div>
@@ -1099,45 +1106,61 @@ function renderAd(){
       </div>`;
     }).join('') || `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 광고가 없어요</div>`;
 
-    // KPI
+    // KPI는 하단 통합으로 처리
+  });
+
+  // KPI 하단 통합 — 구분선 아래 소미/슬기 나란히
+  const kpiWrap=document.getElementById('ad-kpi-wrap');
+  if(!kpiWrap) return;
+
+  const kpiHtml=['somi','seulgi'].map(ch=>{
+    const list=adData.filter(a=>a.channel===ch);
+    const chColor=ch==='seulgi'?'#B45309':'#DB2777';
     const kpi=adKpiData.find(k=>k.channel===ch)||{target_amount:0};
     const totalAmount=list.reduce((s,a)=>s+(a.amount||0),0);
     const target=kpi.target_amount||0;
     const pct=target>0?Math.min(Math.round(totalAmount/target*100),100):0;
-    const kpiEl=document.getElementById('ad-kpi-'+ch);
-    if(kpiEl) kpiEl.innerHTML=`
-      <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 건수</div>
-            <div style="font-size:18px;font-weight:500;color:${chColor}">${list.length}건</div>
+    const chBadge=ch==='seulgi'
+      ?`<span class="badge badge-seulgi">슬기</span>`
+      :`<span class="badge badge-somi">소미</span>`;
+    return `<div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        ${chBadge}
+        <span style="font-size:11px;color:var(--color-text-secondary)">KPI</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 건수</div>
+          <div style="font-size:18px;font-weight:500;color:${chColor}">${list.length}건</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 금액</div>
+          <div style="font-size:18px;font-weight:500;color:${chColor}">${fmtMoney(totalAmount)||'-'}</div>
+        </div>
+      </div>
+      <div style="height:0.5px;background:var(--color-border-tertiary);margin-bottom:10px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:var(--color-text-secondary)">목표 금액</span>
+        <div>
+          <div id="kpi-disp-${ch}" style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="editKpiTarget('${ch}')" onmouseover="document.getElementById('kpi-pencil-${ch}').style.opacity=1" onmouseout="document.getElementById('kpi-pencil-${ch}').style.opacity=0">
+            <span id="kpi-text-${ch}" style="font-size:13px;font-weight:500">${target?fmtMoney(target):'설정 안 됨'}</span>
+            <i class="ti ti-pencil" id="kpi-pencil-${ch}" style="font-size:12px;color:var(--color-text-secondary);opacity:0;transition:opacity .15s"></i>
           </div>
-          <div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 금액</div>
-            <div style="font-size:18px;font-weight:500;color:${chColor}">${fmtMoney(totalAmount)}</div>
-          </div>
+          <input type="number" id="kpi-input-${ch}" value="${target}" style="display:none;font-size:13px;font-weight:500;padding:2px 6px;border:0.5px solid #7F77DD;border-radius:5px;background:var(--color-background-primary);color:var(--color-text-primary);width:130px;outline:none"
+            onblur="saveKpiTarget('${ch}')" onkeydown="if(event.key==='Enter')saveKpiTarget('${ch}')">
         </div>
-        <div style="height:0.5px;background:var(--color-border-tertiary);margin-bottom:10px"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:11px;color:var(--color-text-secondary)">목표 금액</span>
-          <div id="kpi-display-${ch}">
-            <div style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="editKpiTarget('${ch}')" onmouseover="document.getElementById('kpi-pencil-${ch}').style.opacity=1" onmouseout="document.getElementById('kpi-pencil-${ch}').style.opacity=0">
-              <span id="kpi-text-${ch}" style="font-size:13px;font-weight:500">${target?fmtMoney(target):'설정 안 됨'}</span>
-              <i class="ti ti-pencil" id="kpi-pencil-${ch}" style="font-size:12px;color:var(--color-text-secondary);opacity:0;transition:opacity .15s"></i>
-            </div>
-            <input type="number" id="kpi-input-${ch}" value="${target}" style="display:none;font-size:13px;font-weight:500;padding:2px 6px;border:0.5px solid #7F77DD;border-radius:5px;background:var(--color-background-primary);color:var(--color-text-primary);width:130px;outline:none"
-              onblur="saveKpiTarget('${ch}')" onkeydown="if(event.key==='Enter')saveKpiTarget('${ch}')">
-          </div>
-        </div>
-        <div style="height:5px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden;margin:8px 0 4px">
-          <div style="height:100%;width:${pct}%;background:${chColor};border-radius:3px;transition:width .4s"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:var(--color-text-secondary)">달성률</span>
-          <span style="font-weight:500">${pct}%</span>
-        </div>
-      </div>`;
-  });
+      </div>
+      <div style="height:5px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden;margin:8px 0 4px">
+        <div style="height:100%;width:${pct}%;background:${chColor};border-radius:3px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px">
+        <span style="color:var(--color-text-secondary)">달성률</span>
+        <span style="font-weight:500">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  kpiWrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${kpiHtml}</div>`;
 }
 
 function toggleAd(bodyId,icId){
@@ -1150,7 +1173,7 @@ function toggleAd(bodyId,icId){
 }
 
 function editKpiTarget(ch){
-  document.getElementById('kpi-display-'+ch).querySelector('div').style.display='none';
+  document.getElementById('kpi-disp-'+ch).style.display='none';
   const inp=document.getElementById('kpi-input-'+ch);
   inp.style.display='block';
   inp.focus();inp.select();
@@ -1160,8 +1183,7 @@ async function saveKpiTarget(ch){
   const inp=document.getElementById('kpi-input-'+ch);
   const val=parseInt(inp.value)||0;
   inp.style.display='none';
-  const displayDiv=document.getElementById('kpi-display-'+ch).querySelector('div');
-  displayDiv.style.display='flex';
+  document.getElementById('kpi-disp-'+ch).style.display='flex';
   const existing=adKpiData.find(k=>k.channel===ch);
   if(existing){
     await db.from('ad_kpi').update({target_amount:val,updated_at:new Date().toISOString()}).eq('channel',ch);
