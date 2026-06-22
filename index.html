@@ -139,6 +139,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="nav-item" onclick="showPage('calendar',this)"><i class="ti ti-calendar"></i> 캘린더</div>
   <div class="nav-item" onclick="showPage('upload',this)"><i class="ti ti-upload"></i> 업로드 스케줄</div>
   <div class="nav-item" onclick="showPage('shoot',this)"><i class="ti ti-camera"></i> 촬영</div>
+  <div class="nav-item" onclick="showPage('ad',this)"><i class="ti ti-speakerphone"></i> 광고</div>
   <div class="nav-item" onclick="showPage('resource',this)"><i class="ti ti-folder"></i> 리소스 허브</div>
   <div class="nav-item" onclick="showPage('notice',this)"><i class="ti ti-bell"></i> 공지 게시판</div>
 </aside>
@@ -311,6 +312,81 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <div class="modal-btns">
       <button class="btn" onclick="closeModal('modal-shoot')">취소</button>
       <button class="btn btn-primary" onclick="saveShoot()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- AD -->
+<div id="page-ad" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <h2 class="page-title" style="margin:0">광고</h2>
+    <button class="btn btn-primary" onclick="openAddAd()"><i class="ti ti-plus"></i> 광고 추가</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- 소미 -->
+    <div>
+      <div style="margin-bottom:10px"><span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span></div>
+      <div id="ad-list-somi" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div id="ad-kpi-somi" style="margin-top:10px"></div>
+    </div>
+    <!-- 슬기 -->
+    <div>
+      <div style="margin-bottom:10px"><span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span></div>
+      <div id="ad-list-seulgi" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div id="ad-kpi-seulgi" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 광고 모달 -->
+<div id="modal-ad" class="modal-overlay" style="display:none" onclick="closeModal('modal-ad',event)">
+  <div class="modal" style="width:440px">
+    <h3 id="ad-modal-title">광고 추가</h3>
+    <input type="hidden" id="ad-edit-id">
+    <label>채널</label>
+    <select id="ad-channel"><option value="somi">소미</option><option value="seulgi">슬기</option></select>
+    <label>분류</label>
+    <select id="ad-type">
+      <option value="BDC">BDC</option>
+      <option value="기획PPL">기획PPL</option>
+      <option value="단순PPL">단순PPL</option>
+    </select>
+    <label>브랜드명</label>
+    <input type="text" id="ad-brand" placeholder="예: 메디큐브">
+    <label>광고 제품</label>
+    <input type="text" id="ad-product" placeholder="예: 에이지알 부스터">
+    <label>담당자</label>
+    <select id="ad-member">
+      <option value="미정">미정</option>
+      <option value="지니">지니</option>
+      <option value="이든">이든</option>
+      <option value="제이미">제이미</option>
+      <option value="체리시">체리시</option>
+      <option value="메이">메이</option>
+      <option value="헤이디">헤이디</option>
+    </select>
+    <label>상태</label>
+    <select id="ad-status">
+      <option value="internal">내부 논의중</option>
+      <option value="agency">소속사 논의중</option>
+      <option value="plan">구성안 작성중</option>
+      <option value="filmed">촬영 완료</option>
+      <option value="setting">세팅 중</option>
+      <option value="done">업로드 완료</option>
+    </select>
+    <label>광고 금액 <span style="font-weight:400;color:#999">(원)</span></label>
+    <input type="number" id="ad-amount" placeholder="0">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>구성안 전달일</label><input type="datetime-local" id="ad-plan-date"></div>
+      <div><label>가편 전달일</label><input type="datetime-local" id="ad-rough-date"></div>
+    </div>
+    <label>최종본 공유일</label><input type="datetime-local" id="ad-final-date">
+    <label>메모 <span style="font-weight:400;color:#999">(선택)</span></label>
+    <textarea id="ad-memo" style="height:60px" placeholder="추가 메모"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-danger btn-sm" id="ad-delete-btn" style="display:none;margin-right:auto" onclick="deleteAdFromModal()">삭제</button>
+      <button class="btn" onclick="closeModal('modal-ad')">취소</button>
+      <button class="btn btn-primary" onclick="saveAd()">저장</button>
     </div>
   </div>
 </div>
@@ -709,7 +785,7 @@ const statusMap = {
   shoot:  {label:'촬영 완료',   cls:'status-shoot'}
 };
 
-let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[];
+let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[],adData=[],adKpiData=[];
 let memberExtraTasks={}, memberStatuses={}, memberSchedulesData={};
 let gcalEvents=[];
 let curYear=new Date().getFullYear(), curMonth=new Date().getMonth();
@@ -730,7 +806,7 @@ function execFontSize(s){document.execCommand('fontSize',false,s);document.getEl
 async function loadData(){
   setLoading(true);
   try{
-    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR]=await Promise.all([
+    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR,adR,kpR]=await Promise.all([
       db.from('events').select('*').order('date'),
       db.from('uploads').select('*').order('date'),
       db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
@@ -741,11 +817,14 @@ async function loadData(){
       db.from('member_statuses').select('*'),
       db.from('upload_member_schedules').select('*'),
       db.from('shoots').select('*'),
-      db.from('shoot_dates').select('*').order('shoot_date')
+      db.from('shoot_dates').select('*').order('shoot_date'),
+      db.from('ads').select('*').order('created_at',{ascending:false}),
+      db.from('ad_kpi').select('*')
     ]);
     events=evR.data||[]; uploadData=upR.data||[]; noticeData=noR.data||[];
     resourceData=reR.data||[]; memoData=moR.data||[]; handoverData=hwR.data||[];
     shootData=shR.data||[]; shootDatesData=sdR.data||[];
+    adData=adR.data||[]; adKpiData=kpR.data||[];
     // 업로드별 멤버 스케줄 맵핑
     memberSchedulesData={};
     (msR.data||[]).forEach(s=>{
@@ -798,7 +877,7 @@ async function syncGoogleCalendar(){
 }
 
 // ── 전체 렌더 ──
-function renderAll(){renderUpload();renderHome();renderNotices();renderResources();renderMemos();renderHandovers();renderShoot();}
+function renderAll(){renderUpload();renderHome();renderNotices();renderResources();renderMemos();renderHandovers();renderShoot();renderAd();}
 function renderCalendar(){} // iframe 방식으로 변경되어 사용 안 함
 
 function switchCalView(mode){
@@ -957,6 +1036,207 @@ async function saveShoot(){
 
   closeModal('modal-shoot');
   showToast('저장됐어요 ✓');
+}
+
+// ── 광고 ──
+const AD_STATUS={
+  internal:{label:'내부 논의중', bg:'#FCEBEB', color:'#791F1F'},
+  agency:  {label:'소속사 논의중',bg:'#FBEAF0', color:'#72243E'},
+  plan:    {label:'구성안 작성중',bg:'#FAEEDA', color:'#633806'},
+  filmed:  {label:'촬영 완료',   bg:'#E6F1FB', color:'#0C447C'},
+  setting: {label:'세팅 중',     bg:'#EEEDFE', color:'#3C3489'},
+  done:    {label:'업로드 완료', bg:'#EAF3DE', color:'#27500A'},
+};
+const AD_TYPE_STYLE={
+  BDC:    {bg:'#EEEDFE',color:'#3C3489'},
+  기획PPL:{bg:'#E1F5EE',color:'#085041'},
+  단순PPL:{bg:'#FAEEDA',color:'#633806'},
+};
+
+function fmtMoney(n){
+  if(!n||n===0) return '-';
+  if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억원';
+  if(n>=10000) return Math.round(n/10000)+'만원';
+  return n.toLocaleString()+'원';
+}
+function fmtDatetime(str){
+  if(!str) return '-';
+  return str.replace('T',' ').slice(0,16);
+}
+
+function renderAd(){
+  ['somi','seulgi'].forEach(ch=>{
+    const list=adData.filter(a=>a.channel===ch);
+    const chColor=ch==='seulgi'?'#B45309':'#DB2777';
+    const el=document.getElementById('ad-list-'+ch);
+    if(!el) return;
+
+    el.innerHTML=list.map(a=>{
+      const st=AD_STATUS[a.status]||{label:a.status,bg:'#eee',color:'#555'};
+      const ty=AD_TYPE_STYLE[a.type]||{bg:'#eee',color:'#555'};
+      const isDone=a.status==='done';
+      const hasDetail=a.product||a.member||a.plan_date||a.rough_date||a.final_date||a.memo||a.amount;
+      return `<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${chColor};border-radius:var(--border-radius-lg);overflow:hidden;${isDone?'opacity:.7':''}">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none" onclick="toggleAd('ad-body-${a.id}','ad-ic-${a.id}')">
+          <span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500;flex-shrink:0;background:${ty.bg};color:${ty.color}">${a.type}</span>
+          <span style="font-size:13px;font-weight:500;flex:1;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${a.brand}</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap;background:${st.bg};color:${st.color}">${st.label}</span>
+          <i class="ti ti-chevron-down" id="ad-ic-${a.id}" style="font-size:14px;color:var(--color-text-secondary);transition:transform .2s;flex-shrink:0"></i>
+        </div>
+        <div id="ad-body-${a.id}" style="display:none;padding:0 12px 12px;border-top:0.5px solid var(--color-border-tertiary)">
+          <div style="padding-top:10px;display:flex;flex-direction:column;gap:6px">
+            ${a.product?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--color-text-secondary)">제품</span><span>${a.product}</span></div>`:''}
+            ${a.member?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--color-text-secondary)">담당자</span><span>${a.member}</span></div>`:''}
+            ${a.amount?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--color-text-secondary)">광고 금액</span><span style="font-weight:500;color:${chColor}">${fmtMoney(a.amount)}</span></div>`:''}
+            ${(a.plan_date||a.rough_date||a.final_date)?`<div style="height:0.5px;background:var(--color-border-tertiary);margin:2px 0"></div>`:''}
+            ${a.plan_date?`<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--color-text-secondary)">구성안 전달</span><span>${fmtDatetime(a.plan_date)}</span></div>`:''}
+            ${a.rough_date?`<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--color-text-secondary)">가편 전달</span><span>${fmtDatetime(a.rough_date)}</span></div>`:''}
+            ${a.final_date?`<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--color-text-secondary)">최종본 공유</span><span>${fmtDatetime(a.final_date)}</span></div>`:''}
+            ${a.memo?`<div style="font-size:11px;color:var(--color-text-secondary);padding-top:4px;border-top:0.5px solid var(--color-border-tertiary)">${a.memo}</div>`:''}
+            <button onclick="openEditAd('${a.id}')" style="align-self:flex-end;background:none;border:0.5px solid var(--color-border-secondary);border-radius:5px;padding:2px 10px;font-size:11px;cursor:pointer;color:var(--color-text-secondary)">수정</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('') || `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 광고가 없어요</div>`;
+
+    // KPI
+    const kpi=adKpiData.find(k=>k.channel===ch)||{target_amount:0};
+    const totalAmount=list.reduce((s,a)=>s+(a.amount||0),0);
+    const target=kpi.target_amount||0;
+    const pct=target>0?Math.min(Math.round(totalAmount/target*100),100):0;
+    const kpiEl=document.getElementById('ad-kpi-'+ch);
+    if(kpiEl) kpiEl.innerHTML=`
+      <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 건수</div>
+            <div style="font-size:18px;font-weight:500;color:${chColor}">${list.length}건</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px">진행 금액</div>
+            <div style="font-size:18px;font-weight:500;color:${chColor}">${fmtMoney(totalAmount)}</div>
+          </div>
+        </div>
+        <div style="height:0.5px;background:var(--color-border-tertiary);margin-bottom:10px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--color-text-secondary)">목표 금액</span>
+          <div id="kpi-display-${ch}">
+            <div style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="editKpiTarget('${ch}')" onmouseover="document.getElementById('kpi-pencil-${ch}').style.opacity=1" onmouseout="document.getElementById('kpi-pencil-${ch}').style.opacity=0">
+              <span id="kpi-text-${ch}" style="font-size:13px;font-weight:500">${target?fmtMoney(target):'설정 안 됨'}</span>
+              <i class="ti ti-pencil" id="kpi-pencil-${ch}" style="font-size:12px;color:var(--color-text-secondary);opacity:0;transition:opacity .15s"></i>
+            </div>
+            <input type="number" id="kpi-input-${ch}" value="${target}" style="display:none;font-size:13px;font-weight:500;padding:2px 6px;border:0.5px solid #7F77DD;border-radius:5px;background:var(--color-background-primary);color:var(--color-text-primary);width:130px;outline:none"
+              onblur="saveKpiTarget('${ch}')" onkeydown="if(event.key==='Enter')saveKpiTarget('${ch}')">
+          </div>
+        </div>
+        <div style="height:5px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden;margin:8px 0 4px">
+          <div style="height:100%;width:${pct}%;background:${chColor};border-radius:3px;transition:width .4s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:var(--color-text-secondary)">달성률</span>
+          <span style="font-weight:500">${pct}%</span>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleAd(bodyId,icId){
+  const el=document.getElementById(bodyId);
+  const ic=document.getElementById(icId);
+  if(!el||!ic)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  ic.style.transform=open?'':'rotate(180deg)';
+}
+
+function editKpiTarget(ch){
+  document.getElementById('kpi-display-'+ch).querySelector('div').style.display='none';
+  const inp=document.getElementById('kpi-input-'+ch);
+  inp.style.display='block';
+  inp.focus();inp.select();
+}
+
+async function saveKpiTarget(ch){
+  const inp=document.getElementById('kpi-input-'+ch);
+  const val=parseInt(inp.value)||0;
+  inp.style.display='none';
+  const displayDiv=document.getElementById('kpi-display-'+ch).querySelector('div');
+  displayDiv.style.display='flex';
+  const existing=adKpiData.find(k=>k.channel===ch);
+  if(existing){
+    await db.from('ad_kpi').update({target_amount:val,updated_at:new Date().toISOString()}).eq('channel',ch);
+  } else {
+    await db.from('ad_kpi').insert({channel:ch,target_amount:val});
+  }
+  showToast('목표 금액 저장됐어요 ✓');
+}
+
+function openAddAd(){
+  document.getElementById('ad-modal-title').textContent='광고 추가';
+  document.getElementById('ad-edit-id').value='';
+  document.getElementById('ad-channel').value='somi';
+  document.getElementById('ad-type').value='BDC';
+  document.getElementById('ad-brand').value='';
+  document.getElementById('ad-product').value='';
+  document.getElementById('ad-member').value='미정';
+  document.getElementById('ad-status').value='internal';
+  document.getElementById('ad-amount').value='';
+  document.getElementById('ad-plan-date').value='';
+  document.getElementById('ad-rough-date').value='';
+  document.getElementById('ad-final-date').value='';
+  document.getElementById('ad-memo').value='';
+  document.getElementById('ad-delete-btn').style.display='none';
+  document.getElementById('modal-ad').style.display='flex';
+}
+
+function openEditAd(id){
+  const a=adData.find(a=>a.id===id);if(!a)return;
+  document.getElementById('ad-modal-title').textContent='광고 수정';
+  document.getElementById('ad-edit-id').value=id;
+  document.getElementById('ad-channel').value=a.channel;
+  document.getElementById('ad-type').value=a.type||'BDC';
+  document.getElementById('ad-brand').value=a.brand;
+  document.getElementById('ad-product').value=a.product||'';
+  document.getElementById('ad-member').value=a.member||'미정';
+  document.getElementById('ad-status').value=a.status||'internal';
+  document.getElementById('ad-amount').value=a.amount||'';
+  document.getElementById('ad-plan-date').value=a.plan_date||'';
+  document.getElementById('ad-rough-date').value=a.rough_date||'';
+  document.getElementById('ad-final-date').value=a.final_date||'';
+  document.getElementById('ad-memo').value=a.memo||'';
+  document.getElementById('ad-delete-btn').style.display='inline-flex';
+  document.getElementById('modal-ad').style.display='flex';
+}
+
+async function saveAd(){
+  const id=document.getElementById('ad-edit-id').value;
+  const brand=document.getElementById('ad-brand').value.trim();
+  if(!brand){showToast('브랜드명을 입력해주세요');return;}
+  const payload={
+    channel:document.getElementById('ad-channel').value,
+    type:document.getElementById('ad-type').value,
+    brand,
+    product:document.getElementById('ad-product').value.trim(),
+    member:document.getElementById('ad-member').value,
+    status:document.getElementById('ad-status').value,
+    amount:parseInt(document.getElementById('ad-amount').value)||0,
+    plan_date:document.getElementById('ad-plan-date').value||null,
+    rough_date:document.getElementById('ad-rough-date').value||null,
+    final_date:document.getElementById('ad-final-date').value||null,
+    memo:document.getElementById('ad-memo').value.trim()
+  };
+  let error;
+  if(id){({error}=await db.from('ads').update(payload).eq('id',id));}
+  else{({error}=await db.from('ads').insert(payload));}
+  if(error){showToast('저장 실패: '+error.message);return;}
+  closeModal('modal-ad');showToast(id?'수정됐어요 ✓':'추가됐어요 ✓');
+}
+
+async function deleteAdFromModal(){
+  const id=document.getElementById('ad-edit-id').value;
+  if(!id||!confirm('삭제할까요?'))return;
+  await db.from('ads').delete().eq('id',id);
+  closeModal('modal-ad');showToast('삭제됐어요');
 }
 
 // ── 업로드 ──
