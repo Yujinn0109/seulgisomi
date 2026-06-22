@@ -900,7 +900,12 @@ async function loadData(){
 }
 
 function subscribeRealtime(){
-  db.channel('db').on('postgres_changes',{event:'*',schema:'public'},()=>loadData()).subscribe();
+  db.channel('db').on('postgres_changes',{event:'*',schema:'public'},()=>{
+    // 모달이 열려있으면 입력 방해 안 하도록 스킵
+    const modalOpen=[...document.querySelectorAll('.modal-overlay')].some(m=>m.style.display==='flex');
+    if(modalOpen) return;
+    loadData();
+  }).subscribe();
 }
 
 // ── 구글 캘린더 (홈 내일 일정 백그라운드 동기화 전용) ──
@@ -1098,6 +1103,7 @@ async function saveShoot(){
 let meetingYear=new Date().getFullYear();
 let curMeetingId=null, curMeetingWeek=1;
 const MEETING_SECTIONS=[
+  {key:'review',label:'🎬 업로드 리뷰', color:'#1D9E75', bg:'#EAF3DE'},
   {key:'issue', label:'📌 월별 이슈', color:'#BA7517', bg:'#FAEEDA'},
   {key:'notice',label:'📢 공지사항', color:'#534AB7', bg:'#EEEDFE'},
   {key:'seulgi',label:'슬기', color:'#B45309', bg:'#FFF8E1', badge:'badge-seulgi'},
@@ -1121,23 +1127,38 @@ function renderMeeting(){
   let html='';
   for(let m=1;m<=12;m++){
     const monthMeetings=meetingData.filter(mt=>mt.year===meetingYear&&mt.month===m);
-    const count=monthMeetings.length;
+    const meetingIds=monthMeetings.map(mt=>mt.id);
+    const itemCount=meetingItemData.filter(it=>meetingIds.includes(it.meeting_id)).length;
+    const hasContent=itemCount>0;
     const isCurrent=meetingYear===new Date().getFullYear()&&m===new Date().getMonth()+1;
-    html+=`<div onclick="openMeetingMonth(${m})" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:18px 16px;cursor:pointer;transition:all .15s;text-align:center;${count===0?'opacity:.5':''}" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
+    html+=`<div onclick="openMeetingMonth(${m})" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:18px 16px;cursor:pointer;transition:all .15s;text-align:center;${!hasContent?'opacity:.5':''}" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
       <div style="font-size:22px;font-weight:600;${isCurrent?'color:#7F77DD':''}">${m}월</div>
-      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${count>0?count+'개 회의록':'기록 없음'}</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${hasContent?itemCount+'개 항목':'기록 없음'}</div>
     </div>`;
   }
   grid.innerHTML=html;
 }
 
 let curMeetingMonth=null;
-function openMeetingMonth(m){
+async function openMeetingMonth(m){
   curMeetingMonth=m;
   curMeetingWeek=1;
   document.getElementById('meeting-months-view').style.display='none';
   document.getElementById('meeting-detail-view').style.display='block';
   document.getElementById('meeting-detail-title').textContent=`${meetingYear}년 ${m}월 회의록`;
+
+  // 이 달에 회의록이 하나도 없으면 1~4주차 자동 생성
+  const existing=meetingData.filter(mt=>mt.year===meetingYear&&mt.month===m);
+  if(existing.length===0){
+    const rows=[1,2,3,4].map(w=>({year:meetingYear,month:m,week:w,title:''}));
+    const{data,error}=await db.from('meetings').insert(rows).select();
+    if(error){showToast('생성 실패: '+error.message);}
+    else{
+      // 로컬 데이터에 즉시 반영
+      if(data) meetingData=meetingData.concat(data);
+      showToast('1~4주차 회의록이 생성됐어요 ✓');
+    }
+  }
   renderMeetingDetail();
 }
 
@@ -2062,8 +2083,26 @@ function renderHandovers(){
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  el.classList.add('active');
+  const pageEl=document.getElementById('page-'+name);
+  if(pageEl) pageEl.classList.add('active');
+  // el이 있으면 그걸, 없으면 해당 nav-item 찾아서 active
+  if(el){
+    el.classList.add('active');
+  } else {
+    document.querySelectorAll('.nav-item').forEach(n=>{
+      if(n.getAttribute('onclick')?.includes(`'${name}'`)) n.classList.add('active');
+    });
+  }
+  // 현재 페이지 기억 (새로고침 후 복원용)
+  location.hash=name;
+}
+
+function restorePage(){
+  const name=location.hash.replace('#','');
+  const valid=['home','calendar','meeting','upload','shoot','ad','resource','notice'];
+  if(name&&valid.includes(name)){
+    showPage(name,null);
+  }
 }
 
 // ── 모달 오픈 ──
@@ -2383,6 +2422,7 @@ async function deleteHandoverFromModal(){
 // ── 초기화 ──
 loadData();
 subscribeRealtime();
+restorePage();
 
 // 구글 캘린더 자동 동기화 (API 키 설정된 경우)
 if(GCAL_API_KEY && GCAL_API_KEY !== 'YOUR_GOOGLE_API_KEY_HERE'){
