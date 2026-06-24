@@ -109,6 +109,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   .sidebar-logo{flex-shrink:0;border-bottom:none;padding:0 16px}
   .main{padding:14px}
   /* 홈 그리드 1열로 */
+  #page-home > div[style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr !important}
   #page-home > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
   /* 팀원 현황 2열로 */
   #member-tasks{grid-template-columns:repeat(2,1fr) !important}
@@ -147,14 +148,35 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <main class="main">
 
+<!-- 통합 검색 -->
+<div style="position:relative;margin-bottom:18px">
+  <div style="display:flex;align-items:center;gap:8px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:9px 14px">
+    <i class="ti ti-search" style="font-size:16px;color:var(--color-text-secondary)"></i>
+    <input type="text" id="global-search" placeholder="영상 제목, 브랜드, 촬영, 회의록 통합 검색..." oninput="runGlobalSearch(this.value)" onfocus="runGlobalSearch(this.value)"
+      style="flex:1;border:none;outline:none;background:none;font-size:13px;color:var(--color-text-primary)">
+    <button onclick="clearGlobalSearch()" id="search-clear" style="display:none;background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:14px">✕</button>
+  </div>
+  <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);box-shadow:0 4px 20px rgba(0,0,0,.1);max-height:400px;overflow-y:auto;z-index:50"></div>
+</div>
+
 <!-- HOME -->
 <div id="page-home" class="page active">
   <h2 class="page-title">오늘의 현황</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+  <!-- 오늘 / 내일 / 이번 주 업로드 3열 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <i class="ti ti-calendar-event" style="font-size:17px;color:#A32D2D"></i>
+        <span style="font-size:13px;font-weight:500">오늘 일정</span>
+        <span id="today-date" style="font-size:11px;color:var(--color-text-secondary);margin-left:auto"></span>
+      </div>
+      <div id="today-list" style="display:flex;flex-direction:column;gap:7px"></div>
+    </div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <i class="ti ti-calendar-event" style="font-size:17px;color:#7F77DD"></i>
-        <span style="font-size:13px;font-weight:500">내일 예정된 일정</span>
+        <span style="font-size:13px;font-weight:500">내일 예정</span>
         <span id="tomorrow-date" style="font-size:11px;color:var(--color-text-secondary);margin-left:auto"></span>
       </div>
       <div id="tomorrow-list" style="display:flex;flex-direction:column;gap:7px"></div>
@@ -167,14 +189,18 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <div id="thisweek-upload" style="display:flex;flex-direction:column;gap:7px"></div>
     </div>
   </div>
-  <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <i class="ti ti-users" style="font-size:17px;color:#378ADD"></i>
-      <span style="font-size:13px;font-weight:500">팀원 현황</span>
+
+  <!-- 주의 필요 (있을 때만 노출) -->
+  <div id="attention-card" class="card" style="margin-bottom:14px;display:none;border:0.5px solid #F0959580;background:#FCEBEB40">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <i class="ti ti-alert-triangle" style="font-size:17px;color:#A32D2D"></i>
+      <span style="font-size:13px;font-weight:500;color:#A32D2D">주의 필요</span>
     </div>
-    <div id="member-tasks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+    <div id="attention-list" style="display:flex;flex-direction:column;gap:7px"></div>
   </div>
-  <div class="card">
+
+  <!-- To Do List (팀원 현황보다 위) -->
+  <div class="card" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px">
         <i class="ti ti-checklist" style="font-size:17px;color:#F76754"></i>
@@ -183,6 +209,15 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <button class="btn btn-primary" style="padding:4px 12px;font-size:12px" onclick="openAddHandover()"><i class="ti ti-plus"></i> 추가</button>
     </div>
     <div id="handover-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- 팀원 현황 -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <i class="ti ti-users" style="font-size:17px;color:#378ADD"></i>
+      <span style="font-size:13px;font-weight:500">팀원 현황</span>
+    </div>
+    <div id="member-tasks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
   </div>
 </div>
 
@@ -210,7 +245,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <!-- UPLOAD -->
 <div id="page-upload" class="page">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
     <h2 class="page-title" style="margin:0">업로드 스케줄</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <div style="display:flex;gap:6px">
@@ -219,6 +254,18 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
         <button id="up-tab-somi" class="btn btn-sm" onclick="filterUpload('somi',this)">소미</button>
       </div>
       <button class="btn btn-primary" onclick="openAddUpload()"><i class="ti ti-plus"></i> 일정 추가</button>
+    </div>
+  </div>
+  <!-- 담당자·상태 필터 칩 -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--color-text-secondary);margin-right:2px">담당자</span>
+      <div id="up-member-filter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+    </div>
+    <div style="width:1px;background:var(--color-border-tertiary);align-self:stretch"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--color-text-secondary);margin-right:2px">상태</span>
+      <div id="up-status-filter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -753,14 +800,17 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="modal" style="width:440px"><h3 id="hw-modal-title">할 일 추가</h3>
     <input type="hidden" id="hw-edit-id">
     <label>할 일</label><input type="text" id="hw-title" placeholder="예: 썸네일 수정 요청">
+    <label>담당자 <span style="font-weight:400;color:#999">(복수 선택 가능)</span></label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px">
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="지니" style="width:auto;margin:0"> 지니</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="이든" style="width:auto;margin:0"> 이든</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="제이미" style="width:auto;margin:0"> 제이미</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="체리시" style="width:auto;margin:0"> 체리시</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="메이" style="width:auto;margin:0"> 메이</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="헤이디" style="width:auto;margin:0"> 헤이디</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="팀 전체" style="width:auto;margin:0"> 팀 전체</label>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>담당자</label>
-        <select id="hw-from">
-          <option>지니</option><option>이든</option><option>제이미</option>
-          <option>체리시</option><option>메이</option><option>헤이디</option><option>메이브</option>
-          <option>팀 전체</option>
-        </select>
-      </div>
       <div><label>채널</label>
         <select id="hw-channel">
           <option value="both">공통</option>
@@ -768,19 +818,12 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
           <option value="somi">소미</option>
         </select>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>마감</label>
-        <select id="hw-deadline">
-          <option value="오늘 마감">오늘 마감</option><option value="오늘 중">오늘 중</option>
-          <option value="이번 주 내">이번 주 내</option><option value="다음 주 내">다음 주 내</option>
-          <option value="미정">미정</option>
-        </select>
-      </div>
       <div><label>상태</label>
         <select id="hw-status"><option value="pending">진행 중</option><option value="done">완료</option></select>
       </div>
     </div>
+    <label>마감일 <span style="font-weight:400;color:#999">(선택)</span></label>
+    <input type="date" id="hw-deadline-date">
     <label>상세 내용 <span style="font-weight:400;color:#999">(선택)</span></label>
     <textarea id="hw-detail" placeholder="상세 내용 입력" style="height:70px"></textarea>
     <div class="modal-btns">
@@ -850,6 +893,17 @@ let uploadFilter='all', curNoticeBoard='episode';
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 function setLoading(on){document.getElementById('loading-overlay').classList.toggle('hidden',!on);}
 function fmt(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+
+// D-day 계산: 날짜 문자열 → {label, color, urgent} (오늘 0시 기준)
+function calcDday(dateStr){
+  if(!dateStr) return null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const target=new Date(dateStr); target.setHours(0,0,0,0);
+  const diff=Math.round((target-today)/(1000*60*60*24));
+  if(diff>0) return {label:`D-${diff}`, color:diff<=2?'#BA7517':'#534AB7', urgent:diff<=2};
+  if(diff===0) return {label:'오늘 마감', color:'#A32D2D', urgent:true};
+  return {label:`${Math.abs(diff)}일 지남`, color:'#A32D2D', urgent:true, overdue:true};
+}
 function closeModal(id,e){if(!e||e.target===document.getElementById(id))document.getElementById(id).style.display='none';}
 let _memoDn=false;
 function memoOverlayDown(e){_memoDn=(e.target===document.getElementById('modal-memo'));}
@@ -1266,6 +1320,16 @@ async function createMeeting(week){
 async function toggleMeetingCheck(id,checked){
   await db.from('meeting_items').update({checked}).eq('id',id);
 }
+// 홈에서 회의 멘션 할일 바로 완료
+async function completeMeetingTask(id){
+  // 로컬 즉시 반영
+  const it=meetingItemData.find(i=>i.id===id);
+  if(it) it.checked=true;
+  renderHome();
+  const{error}=await db.from('meeting_items').update({checked:true}).eq('id',id);
+  if(error){showToast('처리 실패: '+error.message);}
+  else{showToast('완료 처리됐어요 ✓');}
+}
 
 function openAddMeetingItem(meetingId,section){
   document.getElementById('mi-modal-title').textContent='항목 추가';
@@ -1571,6 +1635,10 @@ async function deleteAdFromModal(){
 }
 
 // ── 업로드 ──
+let upMemberFilter='all', upStatusFilter='all';
+const UP_FILTER_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','외주','미정'];
+const UP_FILTER_STATUS=[['plan','기획'],['shoot','촬영 완료'],['edit','편집 중'],['review','검수 중'],['done','업로드 완료']];
+
 function filterUpload(f,el){
   uploadFilter=f;
   ['all','seulgi','somi'].forEach(k=>{
@@ -1580,9 +1648,41 @@ function filterUpload(f,el){
   renderUpload();
 }
 
+function renderUploadFilterChips(){
+  const memberEl=document.getElementById('up-member-filter');
+  const statusEl=document.getElementById('up-status-filter');
+  if(memberEl){
+    const chip=(val,label)=>{
+      const on=upMemberFilter===val;
+      return `<button onclick="setUpMemberFilter('${val}')" style="padding:2px 9px;border-radius:12px;border:0.5px solid ${on?'#7F77DD':'var(--color-border-secondary)'};background:${on?'#7F77DD':'var(--color-background-primary)'};color:${on?'#fff':'var(--color-text-secondary)'};font-size:11px;cursor:pointer;font-weight:${on?'500':'400'}">${label}</button>`;
+    };
+    memberEl.innerHTML=chip('all','전체')+UP_FILTER_MEMBERS.map(m=>chip(m,m)).join('');
+  }
+  if(statusEl){
+    const chip=(val,label)=>{
+      const on=upStatusFilter===val;
+      return `<button onclick="setUpStatusFilter('${val}')" style="padding:2px 9px;border-radius:12px;border:0.5px solid ${on?'#7F77DD':'var(--color-border-secondary)'};background:${on?'#7F77DD':'var(--color-background-primary)'};color:${on?'#fff':'var(--color-text-secondary)'};font-size:11px;cursor:pointer;font-weight:${on?'500':'400'}">${label}</button>`;
+    };
+    statusEl.innerHTML=chip('all','전체')+UP_FILTER_STATUS.map(([v,l])=>chip(v,l)).join('');
+  }
+}
+function setUpMemberFilter(v){ upMemberFilter=v; renderUpload(); }
+function setUpStatusFilter(v){ upStatusFilter=v; renderUpload(); }
+
 
 function renderUpload(){
+  // 필터 칩 렌더 (최초 1회 또는 갱신)
+  renderUploadFilterChips();
+
   let data=uploadFilter==='all'?[...uploadData]:uploadData.filter(u=>u.channel===uploadFilter);
+  // 담당자 필터
+  if(upMemberFilter!=='all'){
+    data=data.filter(u=>(u.member||'').split(',').map(s=>s.trim()).includes(upMemberFilter));
+  }
+  // 상태 필터
+  if(upStatusFilter!=='all'){
+    data=data.filter(u=>u.status===upStatusFilter);
+  }
   data.sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   const statusColors={plan:'#7F77DD',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
@@ -1927,10 +2027,96 @@ function toggleMemo(bodyId,iconId){
 }
 
 // ── 홈 ──
+// ── 주의 필요 영역 ──
+function renderAttention(){
+  const card=document.getElementById('attention-card');
+  const list=document.getElementById('attention-list');
+  if(!card||!list) return;
+  const items=[];
+
+  // 1) 기한 지난/임박 To Do (미완료)
+  handoverData.filter(hw=>hw.status!=='done'&&hw.deadline_date).forEach(hw=>{
+    const dd=calcDday(hw.deadline_date);
+    if(dd&&dd.urgent){
+      const members=(hw.from_member||'').split(',').map(s=>s.trim()).filter(Boolean).join(', ');
+      items.push({sort:dd.overdue?0:1, color:dd.color,
+        html:`<span style="font-size:11px;font-weight:600;color:${dd.color};flex-shrink:0;min-width:60px">${dd.label}</span>
+              <span style="font-size:12px;flex:1">📋 ${hw.title}${members?` <span style="color:var(--color-text-secondary)">· ${members}</span>`:''}</span>
+              <span onclick="showPage('home',null)" style="font-size:10px;color:var(--color-text-secondary)">To Do</span>`});
+    }
+  });
+
+  // 2) 검수 지연 업로드 (status=review이고 업로드일 지남)
+  uploadData.filter(u=>u.status==='review'&&u.date).forEach(u=>{
+    const dd=calcDday(u.date);
+    if(dd&&dd.overdue){
+      const chL=u.channel==='seulgi'?'슬기':'소미';
+      items.push({sort:0, color:'#A32D2D',
+        html:`<span style="font-size:11px;font-weight:600;color:#A32D2D;flex-shrink:0;min-width:60px">${dd.label}</span>
+              <span style="font-size:12px;flex:1">🔍 검수 지연: ${u.title} <span style="color:var(--color-text-secondary)">· ${chL}</span></span>
+              <span onclick="showPage('upload',null)" style="font-size:10px;color:var(--color-text-secondary)">업로드</span>`});
+    }
+  });
+
+  // 3) 광고 전달일 임박/경과 (구성안/가편/최종본, 업로드 완료 아닌 것)
+  adData.filter(a=>a.status!=='done').forEach(a=>{
+    [['plan_date','구성안'],['rough_date','가편'],['final_date','최종본']].forEach(([key,label])=>{
+      if(a[key]){
+        const dd=calcDday(a[key].slice(0,10));
+        if(dd&&dd.urgent){
+          items.push({sort:dd.overdue?0:1, color:dd.color,
+            html:`<span style="font-size:11px;font-weight:600;color:${dd.color};flex-shrink:0;min-width:60px">${dd.label}</span>
+                  <span style="font-size:12px;flex:1">📢 ${a.brand} ${label} 전달</span>
+                  <span onclick="showPage('ad',null)" style="font-size:10px;color:var(--color-text-secondary)">광고</span>`});
+        }
+      }
+    });
+  });
+
+  if(!items.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  // 지난 것 먼저, 그 다음 임박
+  items.sort((a,b)=>a.sort-b.sort);
+  list.innerHTML=items.map(it=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--color-background-primary);border-radius:var(--border-radius-md);cursor:pointer">${it.html}</div>`).join('');
+}
+
 function renderHome(){
   const today=new Date();
+  const todayStr=fmt(today);
   const tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);
   const tomorrowStr=fmt(tomorrow);
+
+  // 일정 항목 렌더 헬퍼
+  const renderEventRow=(ev)=>{
+    const tL={edit:'편집',shoot:'촬영',meeting:'회의',holiday:'휴무'}[ev.type]||ev.type;
+    const tC={edit:'#7F77DD',shoot:'#EF9F27',meeting:'#1D9E75',holiday:'#E24B4A'}[ev.type]||'#888';
+    const m=MEMBERS[ev.member];
+    const ch=ev.channel==='seulgi'?'슬기':ev.channel==='somi'?'소미':'공통';
+    const chC=ev.channel==='seulgi'?'badge-seulgi':ev.channel==='somi'?'badge-somi':'badge-both';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+      <span style="width:6px;height:6px;border-radius:50%;background:${tC};flex-shrink:0"></span>
+      <span style="font-size:12px;font-weight:500;color:${tC};min-width:28px">${tL}</span>
+      <span style="font-size:12px;flex:1">${ev.memo||m?.label||ev.member}</span>
+      <span class="badge ${chC}" style="font-size:10px;padding:2px 6px">${ch}</span>
+    </div>`;
+  };
+  const renderGcalRow=(ev)=>{
+    const c=ev.color||'#7F77DD';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+      <span style="width:6px;height:6px;border-radius:50%;background:${c};flex-shrink:0"></span>
+      <span style="font-size:12px;font-weight:500;color:${c};min-width:28px">📅</span>
+      <span style="font-size:12px;flex:1">${ev.title}</span>
+      <span style="font-size:10px;padding:2px 6px;border-radius:var(--border-radius-md);font-weight:500;background:${c}22;color:${c};flex-shrink:0">${ev.calName||'구글'}</span>
+    </div>`;
+  };
+
+  // 오늘 일정
+  const tdEvs=events.filter(e=>e.date===todayStr);
+  const tdGcal=gcalEvents.filter(e=>e.date===todayStr);
+  document.getElementById('today-date').textContent=`${today.getMonth()+1}/${today.getDate()}`;
+  document.getElementById('today-list').innerHTML=(!tdEvs.length&&!tdGcal.length)
+    ?`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px 0">오늘 일정이 없어요</div>`
+    :[...tdEvs.map(renderEventRow),...tdGcal.map(renderGcalRow)].join('');
 
   // 내일 일정 (Supabase + 구글캘린더)
   const tmEvs=events.filter(e=>e.date===tomorrowStr);
@@ -1938,30 +2124,10 @@ function renderHome(){
   document.getElementById('tomorrow-date').textContent=`${tomorrow.getMonth()+1}/${tomorrow.getDate()}`;
   document.getElementById('tomorrow-list').innerHTML=(!tmEvs.length&&!tmGcal.length)
     ?`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px 0">예정된 일정이 없어요</div>`
-    :[
-      ...tmEvs.map(ev=>{
-        const tL={edit:'편집',shoot:'촬영',meeting:'회의',holiday:'휴무'}[ev.type]||ev.type;
-        const tC={edit:'#7F77DD',shoot:'#EF9F27',meeting:'#1D9E75',holiday:'#E24B4A'}[ev.type]||'#888';
-        const m=MEMBERS[ev.member];
-        const ch=ev.channel==='seulgi'?'슬기':ev.channel==='somi'?'소미':'공통';
-        const chC=ev.channel==='seulgi'?'badge-seulgi':ev.channel==='somi'?'badge-somi':'badge-both';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <span style="width:6px;height:6px;border-radius:50%;background:${tC};flex-shrink:0"></span>
-          <span style="font-size:12px;font-weight:500;color:${tC};min-width:28px">${tL}</span>
-          <span style="font-size:12px;flex:1">${ev.memo||m?.label||ev.member}</span>
-          <span class="badge ${chC}" style="font-size:10px;padding:2px 6px">${ch}</span>
-        </div>`;
-      }),
-      ...tmGcal.map(ev=>{
-        const c=ev.color||'#7F77DD';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <span style="width:6px;height:6px;border-radius:50%;background:${c};flex-shrink:0"></span>
-          <span style="font-size:12px;font-weight:500;color:${c};min-width:28px">📅</span>
-          <span style="font-size:12px;flex:1">${ev.title}</span>
-          <span style="font-size:10px;padding:2px 6px;border-radius:var(--border-radius-md);font-weight:500;background:${c}22;color:${c};flex-shrink:0">${ev.calName||'구글'}</span>
-        </div>`;
-      })
-    ].join('');
+    :[...tmEvs.map(renderEventRow),...tmGcal.map(renderGcalRow)].join('');
+
+  // ── 주의 필요 영역 ──
+  renderAttention();
 
   // 이번 주 업로드
   const mon=new Date(today);mon.setDate(today.getDate()-today.getDay()+1);
@@ -2012,9 +2178,10 @@ function renderHome(){
           <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">${t.title}</span>
         </div>`;
       }),
-      ...mTasks.map(t=>`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(127,119,221,.3)">
-        <span style="font-size:10px;flex-shrink:0">📋</span>
+      ...mTasks.map(t=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(127,119,221,.3)">
+        <span onclick="completeMeetingTask('${t.id}')" style="width:14px;height:14px;border:1.5px solid #bbb;border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center" title="완료 처리"></span>
         <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</span>
+        <span style="font-size:9px;flex-shrink:0;color:#534AB7">📋회의</span>
       </div>`),
       ...eTasks.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(0,0,0,.08)">
         <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">• ${t.content}</span>
@@ -2044,30 +2211,37 @@ function renderHandovers(){
   const el=document.getElementById('handover-list');
   if(!el)return;
   if(!handoverData.length){el.innerHTML=`<div style="font-size:12px;color:var(--color-text-secondary)">아직 할 일이 없어요</div>`;return;}
-  const dlColor={'오늘 마감':'#E24B4A','오늘 중':'#F76754','이번 주 내':'#BA7517','다음 주 내':'#888','미정':'#888'};
-  // 진행중 먼저, 완료는 아래
+  // 진행중 먼저, 완료는 아래 / 진행중끼리는 마감일 빠른 순
   const sorted=[...handoverData].sort((a,b)=>{
     if(a.status==='done'&&b.status!=='done')return 1;
     if(a.status!=='done'&&b.status==='done')return -1;
+    if(a.deadline_date&&b.deadline_date)return new Date(a.deadline_date)-new Date(b.deadline_date);
+    if(a.deadline_date)return -1;
+    if(b.deadline_date)return 1;
     return 0;
   });
   el.innerHTML=sorted.map(hw=>{
-    const assignee=hw.from_member;
-    const assigneeM=Object.values(MEMBERS).find(m=>m.label===assignee);
+    const members=(hw.from_member||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const firstM=Object.values(MEMBERS).find(m=>m.label===members[0]);
     const isDone=hw.status==='done';
-    const dlC=dlColor[hw.deadline]||'#888';
     const chC=hw.channel==='seulgi'?'badge-seulgi':hw.channel==='somi'?'badge-somi':'badge-both';
     const chL=hw.channel==='seulgi'?'슬기':hw.channel==='somi'?'소미':'공통';
-    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);opacity:${isDone?.6:1};border-left:3px solid ${isDone?'#ccc':assigneeM?.color||'#F76754'}">
+    const dday=isDone?null:calcDday(hw.deadline_date);
+    // 담당자 칩들
+    const memberChips=members.map(name=>{
+      const mm=Object.values(MEMBERS).find(m=>m.label===name);
+      return `<span style="font-size:11px;font-weight:500;color:${mm?.color||'#888'}">${name}</span>`;
+    }).join('<span style="font-size:10px;color:#ccc">·</span>');
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);opacity:${isDone?.6:1};border-left:3px solid ${isDone?'#ccc':firstM?.color||'#F76754'}">
       <button onclick="completeHandover('${hw.id}')" style="flex-shrink:0;width:18px;height:18px;border-radius:50%;border:2px solid ${isDone?'#1D9E75':'#ccc'};background:${isDone?'#1D9E75':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;padding:0">
         ${isDone?'<span style="color:#fff;font-size:10px">✓</span>':''}
       </button>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:${isDone?'400':'500'};${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''};margin-bottom:4px">${hw.title}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:500;color:${assigneeM?.color||'#888'}">${assignee}</span>
+          ${memberChips}
           <span class="badge ${chC}" style="font-size:10px">${chL}</span>
-          ${hw.deadline?`<span style="font-size:10px;padding:1px 6px;background:${isDone?'#eee':dlC+'22'};color:${isDone?'#888':dlC};border-radius:4px;font-weight:500">${hw.deadline}</span>`:''}
+          ${dday?`<span style="font-size:10px;padding:1px 6px;background:${dday.color}22;color:${dday.color};border-radius:4px;font-weight:600">${dday.label}</span>`:''}
         </div>
         ${hw.detail?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${hw.detail}</div>`:''}
       </div>
@@ -2078,6 +2252,91 @@ function renderHandovers(){
     </div>`;
   }).join('');
 }
+
+// ── 통합 검색 ──
+function runGlobalSearch(q){
+  const box=document.getElementById('search-results');
+  const clearBtn=document.getElementById('search-clear');
+  const query=(q||'').trim().toLowerCase();
+  if(!query){ box.style.display='none'; if(clearBtn)clearBtn.style.display='none'; return; }
+  if(clearBtn) clearBtn.style.display='block';
+
+  const results=[];
+  // 업로드
+  uploadData.forEach(u=>{
+    if((u.title||'').toLowerCase().includes(query)||(u.member||'').toLowerCase().includes(query)){
+      const chL=u.channel==='seulgi'?'슬기':'소미';
+      results.push({cat:'업로드',catColor:'#1D9E75',title:u.title,sub:`${chL} · ${u.member||''} · ${u.date||''}`,page:'upload'});
+    }
+  });
+  // 광고
+  adData.forEach(a=>{
+    if((a.brand||'').toLowerCase().includes(query)||(a.product||'').toLowerCase().includes(query)){
+      const chL=a.channel==='seulgi'?'슬기':'소미';
+      results.push({cat:'광고',catColor:'#DB2777',title:a.brand,sub:`${chL} · ${a.product||''}`,page:'ad'});
+    }
+  });
+  // 촬영 (업로드 제목 기반 + 촬영팀/메모)
+  shootData.forEach(s=>{
+    const u=uploadData.find(x=>x.id===s.upload_id);
+    const title=u?.title||'';
+    if(title.toLowerCase().includes(query)||(s.shoot_team||'').toLowerCase().includes(query)||(s.memo||'').toLowerCase().includes(query)){
+      results.push({cat:'촬영',catColor:'#BA7517',title:title||'(제목 없음)',sub:s.shoot_team?`촬영팀: ${s.shoot_team}`:'촬영 정보',page:'shoot'});
+    }
+  });
+  // 회의록 항목
+  meetingItemData.forEach(it=>{
+    if((it.content||'').toLowerCase().includes(query)){
+      const mt=meetingData.find(m=>m.id===it.meeting_id);
+      const when=mt?`${mt.year}.${mt.month}월 ${mt.week}주차`:'';
+      const secLabel={review:'업로드 리뷰',issue:'월별 이슈',notice:'공지사항',seulgi:'슬기',somi:'소미'}[it.section]||it.section;
+      results.push({cat:'회의록',catColor:'#534AB7',title:it.content,sub:`${when} · ${secLabel}`,page:'meeting',meetingMonth:mt?.month,meetingYear:mt?.year,meetingWeek:mt?.week});
+    }
+  });
+
+  if(!results.length){
+    box.innerHTML=`<div style="padding:16px;text-align:center;font-size:12px;color:var(--color-text-secondary)">검색 결과가 없어요</div>`;
+    box.style.display='block';
+    return;
+  }
+  window._searchResults=results.slice(0,30);
+  box.innerHTML=window._searchResults.map((r,i)=>`
+    <div onclick="goSearchResult(${i})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:0.5px solid var(--color-border-tertiary)" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background=''">
+      <span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;flex-shrink:0;background:${r.catColor}22;color:${r.catColor}">${r.cat}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.sub}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:13px;color:var(--color-text-secondary);flex-shrink:0"></i>
+    </div>`).join('');
+  box.style.display='block';
+}
+
+function goSearchResult(i){
+  const r=(window._searchResults||[])[i];
+  if(!r) return;
+  clearGlobalSearch();
+  showPage(r.page,null);
+  // 회의록이면 해당 월/주차로 이동
+  if(r.page==='meeting'&&r.meetingMonth){
+    meetingYear=r.meetingYear;
+    setTimeout(()=>{ openMeetingMonth(r.meetingMonth); if(r.meetingWeek) setTimeout(()=>selectMeetingWeek(r.meetingWeek),100); },50);
+  }
+}
+
+function clearGlobalSearch(){
+  const inp=document.getElementById('global-search');
+  if(inp) inp.value='';
+  document.getElementById('search-results').style.display='none';
+  document.getElementById('search-clear').style.display='none';
+}
+
+// 검색 결과 바깥 클릭 시 닫기
+document.addEventListener('click',(e)=>{
+  const box=document.getElementById('search-results');
+  const inp=document.getElementById('global-search');
+  if(box&&inp&&!box.contains(e.target)&&e.target!==inp){ box.style.display='none'; }
+});
 
 // ── 페이지 전환 ──
 function showPage(name,el){
@@ -2233,9 +2492,9 @@ function openAddHandover(){
   document.getElementById('hw-modal-title').textContent='할 일 추가';
   document.getElementById('hw-edit-id').value='';
   document.getElementById('hw-title').value='';
-  document.getElementById('hw-from').value='지니';
+  document.querySelectorAll('.hw-member-cb').forEach(cb=>cb.checked=false);
   document.getElementById('hw-channel').value='both';
-  document.getElementById('hw-deadline').value='이번 주 내';
+  document.getElementById('hw-deadline-date').value='';
   document.getElementById('hw-status').value='pending';
   document.getElementById('hw-detail').value='';
   document.getElementById('hw-delete-btn').style.display='none';
@@ -2246,9 +2505,10 @@ function editHandoverBtn(id){
   document.getElementById('hw-modal-title').textContent='할 일 수정';
   document.getElementById('hw-edit-id').value=id;
   document.getElementById('hw-title').value=hw.title;
-  document.getElementById('hw-from').value=hw.from_member;
+  const members=(hw.from_member||'').split(',').map(s=>s.trim());
+  document.querySelectorAll('.hw-member-cb').forEach(cb=>cb.checked=members.includes(cb.value));
   document.getElementById('hw-channel').value=hw.channel||'both';
-  document.getElementById('hw-deadline').value=hw.deadline||'미정';
+  document.getElementById('hw-deadline-date').value=hw.deadline_date||'';
   document.getElementById('hw-status').value=hw.status||'pending';
   document.getElementById('hw-detail').value=hw.detail||'';
   document.getElementById('hw-delete-btn').style.display='inline-flex';
@@ -2390,12 +2650,15 @@ async function saveHandover(){
   const id=document.getElementById('hw-edit-id').value;
   const title=document.getElementById('hw-title').value.trim();
   if(!title){showToast('할 일을 입력해주세요');return;}
+  const members=[...document.querySelectorAll('.hw-member-cb:checked')].map(cb=>cb.value);
+  if(!members.length){showToast('담당자를 1명 이상 선택해주세요');return;}
+  const memberStr=members.join(', ');
   const payload={
     title,
-    from_member:document.getElementById('hw-from').value,
-    to_member:document.getElementById('hw-from').value, // 동일하게 유지 (DB 호환)
+    from_member:memberStr,
+    to_member:memberStr, // 동일하게 유지 (DB 호환)
     channel:document.getElementById('hw-channel').value,
-    deadline:document.getElementById('hw-deadline').value,
+    deadline_date:document.getElementById('hw-deadline-date').value||null,
     status:document.getElementById('hw-status').value,
     detail:document.getElementById('hw-detail').value
   };
