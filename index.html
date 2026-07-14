@@ -1955,21 +1955,46 @@ function renderUpload(){
     </div>`;
   };
 
-  const soميData=data.filter(u=>u.channel==='somi');
+  const somiData=data.filter(u=>u.channel==='somi');
   const seulgiData=data.filter(u=>u.channel==='seulgi');
 
-  const soميEl=document.getElementById('upload-list-somi');
+  const somiEl=document.getElementById('upload-list-somi');
   const seulgiEl=document.getElementById('upload-list-seulgi');
 
-  if(soميEl) soميEl.innerHTML=soميData.length
-    ? soميData.map(makeCard).join('')
-    : `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
+  // 오늘 기준 지난 항목 분리 (업로드일이 오늘보다 이전)
+  const todayMid=new Date(); todayMid.setHours(0,0,0,0);
+  const isPast=u=>u.date&&new Date(u.date)<todayMid;
 
-  if(seulgiEl) seulgiEl.innerHTML=seulgiData.length
-    ? seulgiData.map(makeCard).join('')
-    : `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
+  const buildList=(list,ch)=>{
+    if(!list.length) return `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
+    const past=list.filter(isPast);
+    const upcoming=list.filter(u=>!isPast(u));
+    let html='';
+    // 지난 항목 접기 (있을 때만)
+    if(past.length){
+      const open=_uploadPastOpen[ch];
+      html+=`<div onclick="toggleUploadPast('${ch}')" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);cursor:pointer;font-size:11px;color:var(--color-text-secondary);user-select:none;margin-bottom:2px">
+        <i class="ti ti-chevron-${open?'down':'right'}" style="font-size:13px"></i>
+        지난 항목 ${past.length}개 ${open?'접기':'펼치기'}
+      </div>`;
+      if(open) html+=past.map(makeCard).join('');
+    }
+    // 예정 항목은 항상 표시
+    html+=upcoming.map(makeCard).join('');
+    if(!upcoming.length&&!past.length) html=`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
+    return html;
+  };
+
+  if(somiEl) somiEl.innerHTML=buildList(somiData,'somi');
+  if(seulgiEl) seulgiEl.innerHTML=buildList(seulgiData,'seulgi');
 
   renderTimeline();
+}
+
+let _uploadPastOpen={somi:false,seulgi:false};
+function toggleUploadPast(ch){
+  _uploadPastOpen[ch]=!_uploadPastOpen[ch];
+  renderUpload();
 }
 
 
