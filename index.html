@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>팀 대시보드</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.31.0/fonts/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -153,6 +154,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <aside class="sidebar">
   <div class="sidebar-logo"><h1>슬기소미팀</h1><p>슬기 &amp; 소미</p></div>
   <div class="nav-item active" onclick="showPage('home',this)"><i class="ti ti-home"></i> 홈</div>
+  <div class="nav-item" onclick="showPage('channel',this)"><i class="ti ti-chart-line"></i> 채널 현황</div>
   <div class="nav-item" onclick="showPage('calendar',this)"><i class="ti ti-calendar"></i> 캘린더</div>
   <div class="nav-item" onclick="showPage('meeting',this)"><i class="ti ti-clipboard-text"></i> 회의</div>
   <div class="nav-item" onclick="showPage('upload',this)"><i class="ti ti-upload"></i> 업로드 스케줄</div>
@@ -235,6 +237,18 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     </div>
     <div id="member-tasks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
   </div>
+</div>
+
+<!-- CHANNEL STATUS -->
+<div id="page-channel" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <h2 class="page-title" style="margin:0">채널 현황</h2>
+    <div style="display:flex;gap:6px">
+      <button id="ch-range-7" class="btn btn-primary btn-sm" onclick="setChannelRange(7,this)">최근 7일</button>
+      <button id="ch-range-30" class="btn btn-sm" onclick="setChannelRange(30,this)">최근 30일</button>
+    </div>
+  </div>
+  <div id="channel-content"></div>
 </div>
 
 <!-- CALENDAR -->
@@ -895,7 +909,7 @@ const statusMap = {
   shoot:  {label:'촬영 완료',   cls:'status-shoot'}
 };
 
-let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[],adData=[],adKpiData=[],meetingData=[],meetingItemData=[];
+let events=[],uploadData=[],noticeData=[],resourceData=[],memoData=[],handoverData=[],shootData=[],shootDatesData=[],adData=[],adKpiData=[],meetingData=[],meetingItemData=[],channelSnapshots=[],videoSnapshots=[];
 let memberExtraTasks={}, memberStatuses={}, memberSchedulesData={};
 let gcalEvents=[];
 let curYear=new Date().getFullYear(), curMonth=new Date().getMonth();
@@ -934,7 +948,7 @@ function execFontSize(s){document.execCommand('fontSize',false,s);document.getEl
 async function loadData(){
   setLoading(true);
   try{
-    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR,adR,kpR,mtR,miR]=await Promise.all([
+    const [evR,upR,noR,reR,moR,hwR,tkR,stR,msR,shR,sdR,adR,kpR,mtR,miR,csR,vsR]=await Promise.all([
       db.from('events').select('*').order('date'),
       db.from('uploads').select('*').order('date'),
       db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
@@ -949,13 +963,16 @@ async function loadData(){
       db.from('ads').select('*').order('created_at',{ascending:false}),
       db.from('ad_kpi').select('*'),
       db.from('meetings').select('*').order('created_at'),
-      db.from('meeting_items').select('*').order('sort_order')
+      db.from('meeting_items').select('*').order('sort_order'),
+      db.from('channel_snapshots').select('*').order('snapshot_date'),
+      db.from('video_snapshots').select('*').order('snapshot_date')
     ]);
     events=evR.data||[]; uploadData=upR.data||[]; noticeData=noR.data||[];
     resourceData=reR.data||[]; memoData=moR.data||[]; handoverData=hwR.data||[];
     shootData=shR.data||[]; shootDatesData=sdR.data||[];
     adData=adR.data||[]; adKpiData=kpR.data||[];
     meetingData=mtR.data||[]; meetingItemData=miR.data||[];
+    channelSnapshots=csR.data||[]; videoSnapshots=vsR.data||[];
     migrateOldMeetingSections();
     // 업로드별 멤버 스케줄 맵핑
     memberSchedulesData={};
@@ -1172,6 +1189,173 @@ const MEETING_SECTIONS=[
 const MENTION_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
 const MEMBER_COLOR_MAP={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
 let curMentions=[];
+
+// ── 채널 현황 ──
+let channelRangeDays=7;
+let _channelCharts=[];
+const CHANNEL_META={
+  'imos_jeonsomi':{name:'IMOS 전소미', color:'#DB2777', badge:'badge-somi'},
+  'hi_sseulgi_':  {name:'하이슬기',    color:'#B45309', badge:'badge-seulgi'},
+};
+
+function setChannelRange(days,el){
+  channelRangeDays=days;
+  [7,30].forEach(d=>{
+    const b=document.getElementById('ch-range-'+d);
+    if(b) b.className='btn btn-sm'+(d===days?' btn-primary':'');
+  });
+  renderChannel();
+}
+
+function renderChannel(){
+  const wrap=document.getElementById('channel-content');
+  if(!wrap) return;
+
+  // 차트 정리
+  _channelCharts.forEach(c=>{try{c.destroy();}catch(e){}});
+  _channelCharts=[];
+
+  if(!channelSnapshots.length){
+    wrap.innerHTML=`<div style="padding:40px;text-align:center;font-size:13px;color:var(--color-text-secondary)">
+      아직 수집된 데이터가 없어요.<br>매일 오전 9시에 자동으로 쌓이며, 추이 그래프는 2일치 이상 모이면 표시됩니다.
+    </div>`;
+    return;
+  }
+
+  const handles=Object.keys(CHANNEL_META).filter(h=>channelSnapshots.some(s=>s.channel_handle===h));
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-channelRangeDays); cutoff.setHours(0,0,0,0);
+
+  let html='';
+  handles.forEach((handle,idx)=>{
+    const meta=CHANNEL_META[handle]||{name:handle,color:'#888'};
+    // 이 채널 스냅샷 (기간 필터, 날짜순)
+    const snaps=channelSnapshots.filter(s=>s.channel_handle===handle&&new Date(s.snapshot_date)>=cutoff)
+      .sort((a,b)=>new Date(a.snapshot_date)-new Date(b.snapshot_date));
+    const latest=snaps[snaps.length-1]||channelSnapshots.filter(s=>s.channel_handle===handle).slice(-1)[0];
+    const first=snaps[0];
+    // 증감 계산
+    const subDelta=(latest&&first)?latest.subscribers-first.subscribers:0;
+    const viewDelta=(latest&&first)?latest.total_views-first.total_views:0;
+
+    html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${meta.color};border-radius:var(--border-radius-lg);padding:18px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <span class="badge ${meta.badge}" style="font-size:12px;padding:3px 10px">${meta.name}</span>
+        <a href="https://www.youtube.com/@${handle}" target="_blank" style="font-size:11px;color:var(--color-text-secondary);text-decoration:none">@${handle} ↗</a>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:3px">구독자</div>
+          <div style="font-size:20px;font-weight:600">${latest?latest.subscribers.toLocaleString():'-'}</div>
+          ${subDelta!==0?`<div style="font-size:11px;font-weight:500;color:${subDelta>0?'#1D9E75':'#A32D2D'};margin-top:2px">${subDelta>0?'+':''}${subDelta.toLocaleString()} (${channelRangeDays}일)</div>`:''}
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:3px">총 조회수</div>
+          <div style="font-size:20px;font-weight:600">${latest?fmtViews(latest.total_views):'-'}</div>
+          ${viewDelta!==0?`<div style="font-size:11px;font-weight:500;color:${viewDelta>0?'#1D9E75':'#A32D2D'};margin-top:2px">+${viewDelta.toLocaleString()} (${channelRangeDays}일)</div>`:''}
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:3px">영상 수</div>
+          <div style="font-size:20px;font-weight:600">${latest?latest.video_count.toLocaleString():'-'}</div>
+        </div>
+      </div>
+
+      ${snaps.length>=2?`<div style="margin-bottom:8px"><canvas id="chart-${handle}" height="80"></canvas></div>`:`<div style="font-size:11px;color:var(--color-text-secondary);padding:8px 0;margin-bottom:8px">추이 그래프는 데이터가 2일치 이상 쌓이면 표시됩니다 (현재 ${snaps.length}일)</div>`}
+    </div>`;
+  });
+
+  // 최근 영상 조회수 (일주일간 조회수 잘 나온 영상 = 최근 영상 중 조회수 상위)
+  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:18px">
+    <div style="font-size:14px;font-weight:500;margin-bottom:14px">🔥 최근 영상 조회수 TOP</div>
+    <div id="channel-top-videos"></div>
+  </div>`;
+
+  wrap.innerHTML=html;
+
+  // 차트 그리기 (DOM 반영 후)
+  setTimeout(()=>{
+    handles.forEach(handle=>{
+      const snaps=channelSnapshots.filter(s=>s.channel_handle===handle&&new Date(s.snapshot_date)>=cutoff)
+        .sort((a,b)=>new Date(a.snapshot_date)-new Date(b.snapshot_date));
+      if(snaps.length<2) return;
+      const canvas=document.getElementById('chart-'+handle);
+      if(!canvas||typeof Chart==='undefined') return;
+      const meta=CHANNEL_META[handle];
+      const labels=snaps.map(s=>s.snapshot_date.slice(5).replace('-','/'));
+      const chart=new Chart(canvas,{
+        type:'line',
+        data:{labels,datasets:[{
+          label:'구독자',data:snaps.map(s=>s.subscribers),
+          borderColor:meta.color,backgroundColor:meta.color+'22',
+          borderWidth:2,tension:.3,pointRadius:3,fill:true,yAxisID:'y'
+        },{
+          label:'총 조회수',data:snaps.map(s=>s.total_views),
+          borderColor:'#888',backgroundColor:'transparent',
+          borderWidth:1.5,borderDash:[4,4],tension:.3,pointRadius:2,yAxisID:'y1'
+        }]},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
+          scales:{
+            y:{position:'left',title:{display:true,text:'구독자',font:{size:10}},ticks:{font:{size:10}}},
+            y1:{position:'right',title:{display:true,text:'조회수',font:{size:10}},ticks:{font:{size:10}},grid:{drawOnChartArea:false}},
+            x:{ticks:{font:{size:10},maxRotation:0}}
+          }
+        }
+      });
+      _channelCharts.push(chart);
+    });
+  },50);
+
+  // 최근 영상 TOP 렌더
+  renderTopVideos();
+}
+
+function renderTopVideos(){
+  const el=document.getElementById('channel-top-videos');
+  if(!el) return;
+  // 각 영상의 최신 스냅샷만 (video_id 기준)
+  const latestByVideo={};
+  videoSnapshots.forEach(v=>{
+    const prev=latestByVideo[v.video_id];
+    if(!prev||new Date(v.snapshot_date)>new Date(prev.snapshot_date)) latestByVideo[v.video_id]=v;
+  });
+  // 최근 업로드(30일 내) 영상 중 조회수 상위 8개
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
+  const vids=Object.values(latestByVideo)
+    .filter(v=>new Date(v.published_at)>=cutoff)
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,8);
+  const list=vids.length?vids:Object.values(latestByVideo).sort((a,b)=>b.views-a.views).slice(0,8);
+
+  if(!list.length){ el.innerHTML=`<div style="font-size:12px;color:var(--color-text-secondary)">영상 데이터가 아직 없어요</div>`; return; }
+
+  el.innerHTML=list.map((v,i)=>{
+    const meta=CHANNEL_META[v.channel_handle]||{name:'',color:'#888'};
+    const pubDate=new Date(v.published_at);
+    const dateStr=`${pubDate.getFullYear()}.${String(pubDate.getMonth()+1).padStart(2,'0')}.${String(pubDate.getDate()).padStart(2,'0')}`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+      <span style="font-size:13px;font-weight:600;color:${i<3?meta.color:'var(--color-text-secondary)'};min-width:18px">${i+1}</span>
+      ${v.thumbnail?`<img src="${v.thumbnail}" style="width:64px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0">`:''}
+      <div style="flex:1;min-width:0">
+        <a href="https://youtube.com/watch?v=${v.video_id}" target="_blank" style="font-size:12px;font-weight:500;color:var(--color-text-primary);text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.title}</a>
+        <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px"><span style="color:${meta.color}">${meta.name}</span> · ${dateStr}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:600">${fmtViews(v.views)}</div>
+        <div style="font-size:10px;color:var(--color-text-secondary)">👍 ${(v.likes||0).toLocaleString()}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function fmtViews(n){
+  if(!n) return '0';
+  if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억';
+  if(n>=10000) return (n/10000).toFixed(1).replace(/\.0$/,'')+'만';
+  if(n>=1000) return (n/1000).toFixed(1).replace(/\.0$/,'')+'천';
+  return n.toLocaleString();
+}
 
 function changeMeetingYear(d){ meetingYear+=d; renderMeeting(); }
 
@@ -2418,6 +2602,10 @@ function showPage(name,el){
     meetingYear=now.getFullYear();
     setTimeout(()=>openMeetingMonth(now.getMonth()+1),30);
   }
+  // 채널 현황 진입 시 렌더 (차트는 페이지 보일 때 그려야 정확)
+  if(name==='channel'){
+    setTimeout(()=>renderChannel(),30);
+  }
   _meetingNavBySearch=false;
   // 현재 페이지 기억 (새로고침 후 복원용)
   location.hash=name;
@@ -2433,7 +2621,7 @@ function getCurrentWeekOfMonth(){
 
 function restorePage(){
   const name=location.hash.replace('#','');
-  const valid=['home','calendar','meeting','upload','shoot','ad','resource','notice'];
+  const valid=['home','channel','calendar','meeting','upload','shoot','ad','resource','notice'];
   if(name&&valid.includes(name)){
     showPage(name,null);
   }
