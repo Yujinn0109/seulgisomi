@@ -126,6 +126,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   #member-tasks{grid-template-columns:1fr !important}
   .main{padding:10px}
 }
+[contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:var(--color-text-secondary);opacity:.6}
+[contenteditable] b, [contenteditable] strong{font-weight:700}
 </style>
 </head>
 <body>
@@ -321,30 +323,19 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <div id="page-shoot" class="page">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 class="page-title" style="margin:0">🎬 촬영</h2>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button id="sh-tab-all" class="btn btn-primary btn-sm" onclick="filterShoot('all',this)">전체</button>
-      <button id="sh-tab-seulgi" class="btn btn-sm" onclick="filterShoot('seulgi',this)">슬기</button>
-      <button id="sh-tab-somi" class="btn btn-sm" onclick="filterShoot('somi',this)">소미</button>
-    </div>
+    <span style="font-size:11px;color:var(--color-text-secondary)">영상 카드를 클릭해 촬영 정보를 입력하세요</span>
   </div>
-  <div style="overflow-x:auto">
-    <table id="shoot-table" style="width:100%;border-collapse:collapse;background:var(--color-background-primary);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--color-border-tertiary)">
-      <thead>
-        <tr style="background:var(--color-background-secondary)">
-          <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:140px">영상 제목</th>
-          <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:90px">촬영일</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">지니</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">이든</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">제이미</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">체리시</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">메이</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">헤이디</th>
-          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">셀프캠</th>
-          <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);min-width:120px">촬영팀</th>
-        </tr>
-      </thead>
-      <tbody id="shoot-tbody"></tbody>
-    </table>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- 소미 -->
+    <div>
+      <div style="margin-bottom:10px"><span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span></div>
+      <div id="shoot-list-somi" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <!-- 슬기 -->
+    <div>
+      <div style="margin-bottom:10px"><span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span></div>
+      <div id="shoot-list-seulgi" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
   </div>
 </div>
 
@@ -495,10 +486,16 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="mi-type" value="bullet" checked style="width:auto;margin:0"> • 불릿 (아이디어)</label>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="mi-type" value="checkbox" style="width:auto;margin:0"> ☐ 체크박스 (할일)</label>
     </div>
-    <label>내용</label>
-    <textarea id="mi-content" placeholder="내용 입력 (@ 입력하면 멤버 멘션)" style="height:70px" oninput="handleMentionInput(this)"></textarea>
-    <div id="mi-mention-dropdown" style="display:none;position:relative"></div>
-    <label>멘션 <span style="font-weight:400;color:#999">(클릭해서 추가)</span></label>
+    <label>연관 아이템 <span style="font-weight:400;color:#999">(선택 · 미지정 가능)</span></label>
+    <select id="mi-linked-upload" style="margin-bottom:12px"></select>
+    <label>내용 <span style="font-weight:400;color:#999">· 굵게는 텍스트 선택 후 ⌘/Ctrl+B</span></label>
+    <div style="display:flex;gap:5px;margin-bottom:6px">
+      <button type="button" class="btn btn-sm" style="width:32px;font-weight:700;padding:4px 0" onclick="miBold()" title="굵게 (Ctrl+B)">B</button>
+    </div>
+    <div id="mi-content" contenteditable="true" onkeydown="miContentKeydown(event)"
+      style="min-height:80px;padding:9px 11px;border:0.5px solid var(--color-border-secondary);border-radius:7px;font-size:13px;line-height:1.6;outline:none;background:var(--color-background-primary);color:var(--color-text-primary)"
+      data-placeholder="내용 입력 (Enter로 줄바꿈, @이름으로 멘션)"></div>
+    <label style="margin-top:12px">멘션 <span style="font-weight:400;color:#999">(클릭해서 추가)</span></label>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="mi-mention-chips"></div>
     <div class="modal-btns">
       <button class="btn btn-danger btn-sm" id="mi-delete-btn" style="display:none;margin-right:auto" onclick="deleteMeetingItem()">삭제</button>
@@ -909,6 +906,13 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function setLoading(on){document.getElementById('loading-overlay').classList.toggle('hidden',!on);}
 function fmt(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 
+// HTML 태그 제거 → 순수 텍스트 (회의 내용 미리보기용)
+function stripHtml(html){
+  const tmp=document.createElement('div');
+  tmp.innerHTML=html||'';
+  return tmp.textContent||tmp.innerText||'';
+}
+
 // D-day 계산: 날짜 문자열 → {label, color, urgent} (오늘 0시 기준)
 function calcDday(dateStr){
   if(!dateStr) return null;
@@ -1026,54 +1030,39 @@ function switchCalView(mode){
 // ── 촬영 ──
 const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디','셀프캠'];
 const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','셀프캠':'#8B7355'};
-let shootFilter='all';
-
-function filterShoot(f,el){
-  shootFilter=f;
-  ['all','seulgi','somi'].forEach(k=>{
-    const b=document.getElementById('sh-tab-'+k);
-    if(b){b.className='btn btn-sm'+(k===f?' btn-primary':'');}
-  });
-  renderShoot();
-}
-
 function renderShoot(){
-  let data=shootFilter==='all'?[...uploadData]:uploadData.filter(u=>u.channel===shootFilter);
-  data.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  ['somi','seulgi'].forEach(ch=>{
+    const chColor=ch==='seulgi'?'#B45309':'#DB2777';
+    const list=uploadData.filter(u=>u.channel===ch).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const el=document.getElementById('shoot-list-'+ch);
+    if(!el) return;
 
-  document.getElementById('shoot-tbody').innerHTML=data.map(u=>{
-    const sh=shootData.find(s=>s.upload_id===u.id)||{};
-    const checkedMembers=(sh.members||'').split(',').map(s=>s.trim()).filter(Boolean);
-    const chC=u.channel==='seulgi'?'badge-seulgi':'badge-somi';
-    const chL=u.channel==='seulgi'?'슬기':'소미';
-    const hasMemo=sh.memo&&sh.memo.trim();
-    // 촬영일 목록
-    const dates=shootDatesData.filter(d=>d.upload_id===u.id);
-    const datesHtml=dates.length
-      ? dates.map(d=>`<div style="font-size:11px;color:#C6DA81;font-weight:500">${d.shoot_date.slice(5).replace('-','/')}${d.note?` <span style="color:var(--color-text-secondary);font-weight:400">· ${d.note}</span>`:''}</div>`).join('')
-      : `<span style="font-size:11px;color:var(--color-text-secondary)">-</span>`;
+    el.innerHTML=list.map(u=>{
+      const sh=shootData.find(s=>s.upload_id===u.id)||{};
+      const checkedMembers=(sh.members||'').split(',').map(s=>s.trim()).filter(Boolean);
+      const hasMemo=sh.memo&&sh.memo.trim();
+      const dates=shootDatesData.filter(d=>d.upload_id===u.id);
+      // 촬영일 표시 (여러 개면 모두)
+      const dateLabel=dates.length
+        ? dates.map(d=>d.shoot_date.slice(5).replace('-','/')).join(', ')
+        : (u.date?u.date.slice(5).replace('-','/'):'-');
+      // 멤버 칩
+      const memberChips=checkedMembers.map(name=>{
+        const c=SHOOT_MEMBER_COLORS[name]||'#888';
+        const short=name.length>2?name.slice(0,2):name;
+        return `<span style="width:22px;height:22px;border-radius:50%;background:${c};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600" title="${name}">${short}</span>`;
+      }).join('');
 
-    const memberCells=SHOOT_MEMBERS.map(name=>`
-      <td style="padding:10px 8px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary)">
-        ${checkedMembers.includes(name)?`<span style="color:${SHOOT_MEMBER_COLORS[name]};font-size:16px;font-weight:700">✓</span>`:''}
-      </td>`).join('');
-
-    return `<tr style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background=''" onclick="openShootModal('${u.id}')">
-      <td style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="badge ${chC}" style="flex-shrink:0;font-size:10px">${chL}</span>
-          <div>
-            <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary)">${u.date.slice(5).replace('-','/')}</div>
-            <div style="font-size:13px;font-weight:500">${u.title}</div>
-          </div>
-          ${hasMemo?`<span style="font-size:10px;background:#EEEDFE;color:#3D4D1A;padding:1px 5px;border-radius:3px;flex-shrink:0">메모</span>`:''}
+      return `<div onclick="openShootModal('${u.id}')" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${chColor};border-radius:var(--border-radius-lg);padding:12px 14px;cursor:pointer;transition:box-shadow .1s" onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,.06)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
+          <div style="font-size:13px;font-weight:500;flex:1">${u.title}${hasMemo?` <span style="font-size:10px;background:#EEEDFE;color:#3D4D1A;padding:1px 5px;border-radius:3px">메모</span>`:''}</div>
+          <span style="font-size:11px;color:var(--color-text-secondary);flex-shrink:0;white-space:nowrap">${dateLabel}</span>
         </div>
-      </td>
-      <td style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">${datesHtml}</td>
-      ${memberCells}
-      <td style="padding:10px 14px;font-size:12px;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">${sh.shoot_team||''}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="10" style="padding:24px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 영상이 없어요</td></tr>`;
+        ${memberChips?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:${sh.shoot_team?'8px':'0'}">${memberChips}</div>`:''}
+        ${sh.shoot_team?`<div style="font-size:11px;color:var(--color-text-secondary)">촬영팀: ${sh.shoot_team}</div>`:''}
+      </div>`;
+    }).join('') || `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 촬영이 없어요</div>`;
+  });
 }
 
 function addShootDateRow(date='', note=''){
@@ -1304,7 +1293,18 @@ function renderMeetingDetail(){
         const c=MEMBER_COLOR_MAP[m]||'#3D4D1A';
         return `<span style="background:${c}22;color:${c};padding:0 5px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap">@${m}</span>`;
       }).join(' ');
-      const contentHtml=`${it.content}${mentionsHtml?' '+mentionsHtml:''}`;
+      // 연결된 아이템(업로드 영상) 태그
+      let linkedTag='';
+      if(it.linked_upload_id){
+        const lu=uploadData.find(u=>u.id===it.linked_upload_id);
+        if(lu){
+          const c=lu.channel==='seulgi'?'#B45309':'#DB2777';
+          const chL=lu.channel==='seulgi'?'슬기':'소미';
+          linkedTag=`<span style="background:${c}18;color:${c};padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;white-space:nowrap">🎬 ${chL}·${lu.title}</span>`;
+        }
+      }
+      const metaHtml=[linkedTag,mentionsHtml].filter(Boolean).join(' ');
+      const contentHtml=`<span>${it.content}</span>${metaHtml?' '+metaHtml:''}`;
       if(it.item_type==='checkbox'){
         html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5;group" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
           <span onclick="toggleMeetingCheck('${it.id}',${!it.checked})" style="width:15px;height:15px;border:1.5px solid ${it.checked?'#1D9E75':'#bbb'};border-radius:4px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${it.checked?'#1D9E75':'transparent'}">${it.checked?'<span style="color:#fff;font-size:10px">✓</span>':''}</span>
@@ -1362,17 +1362,36 @@ async function completeMeetingTask(id){
   else{showToast('완료 처리됐어요 ✓');}
 }
 
+// 아이템(업로드 영상) 드롭다운 채우기
+function fillMeetingUploadOptions(selectedId){
+  const sel=document.getElementById('mi-linked-upload');
+  if(!sel) return;
+  const opts=['<option value="">— 미지정 —</option>'];
+  const sorted=[...uploadData].sort((a,b)=>{
+    if(a.channel!==b.channel) return a.channel==='somi'?-1:1;
+    return new Date(b.date)-new Date(a.date);
+  });
+  sorted.forEach(u=>{
+    const chL=u.channel==='seulgi'?'슬기':'소미';
+    const sel2=u.id===selectedId?' selected':'';
+    opts.push(`<option value="${u.id}"${sel2}>[${chL}] ${u.title}</option>`);
+  });
+  sel.innerHTML=opts.join('');
+}
+
 function openAddMeetingItem(meetingId,section){
   document.getElementById('mi-modal-title').textContent='항목 추가';
   document.getElementById('mi-edit-id').value='';
   document.getElementById('mi-meeting-id').value=meetingId;
   document.getElementById('mi-section').value=section;
   document.querySelector('input[name="mi-type"][value="bullet"]').checked=true;
-  document.getElementById('mi-content').value='';
+  document.getElementById('mi-content').innerHTML='';
+  fillMeetingUploadOptions('');
   curMentions=[];
   renderMentionChips();
   document.getElementById('mi-delete-btn').style.display='none';
   document.getElementById('modal-meeting-item').style.display='flex';
+  setTimeout(()=>document.getElementById('mi-content').focus(),50);
 }
 
 function editMeetingItem(id){
@@ -1382,11 +1401,25 @@ function editMeetingItem(id){
   document.getElementById('mi-meeting-id').value=it.meeting_id;
   document.getElementById('mi-section').value=it.section;
   document.querySelector(`input[name="mi-type"][value="${it.item_type}"]`).checked=true;
-  document.getElementById('mi-content').value=it.content;
+  // content가 HTML(볼드/줄바꿈) 포함일 수 있음 → innerHTML로
+  document.getElementById('mi-content').innerHTML=it.content||'';
+  fillMeetingUploadOptions(it.linked_upload_id||'');
   curMentions=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean);
   renderMentionChips();
   document.getElementById('mi-delete-btn').style.display='inline-flex';
   document.getElementById('modal-meeting-item').style.display='flex';
+}
+
+// 볼드 토글 (버튼 or Ctrl+B)
+function miBold(){
+  document.getElementById('mi-content').focus();
+  document.execCommand('bold',false,null);
+}
+function miContentKeydown(e){
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){
+    e.preventDefault();
+    document.execCommand('bold',false,null);
+  }
 }
 
 function renderMentionChips(){
@@ -1404,27 +1437,19 @@ function toggleMention(m){
   renderMentionChips();
 }
 
-function handleMentionInput(ta){
-  // @멤버명 자동 인식해서 칩에 반영
-  const text=ta.value;
-  MENTION_MEMBERS.forEach(m=>{
-    if(text.includes('@'+m)&&!curMentions.includes(m)){
-      curMentions.push(m);
-      ta.value=text.replace('@'+m,'').replace(/\s+$/,'');
-      renderMentionChips();
-    }
-  });
-}
-
 async function saveMeetingItem(){
   const id=document.getElementById('mi-edit-id').value;
   const meetingId=document.getElementById('mi-meeting-id').value;
   const section=document.getElementById('mi-section').value;
-  const content=document.getElementById('mi-content').value.trim();
+  // contenteditable → HTML 보존 (볼드/줄바꿈)
+  const contentEl=document.getElementById('mi-content');
+  const content=contentEl.innerHTML.trim();
+  const textOnly=contentEl.textContent.trim();
   const itemType=document.querySelector('input[name="mi-type"]:checked').value;
-  if(!content){showToast('내용을 입력해주세요');return;}
+  const linkedUploadId=document.getElementById('mi-linked-upload').value||null;
+  if(!textOnly){showToast('내용을 입력해주세요');return;}
 
-  const payload={meeting_id:meetingId,section,item_type:itemType,content,mentions:curMentions.join(',')};
+  const payload={meeting_id:meetingId,section,item_type:itemType,content,mentions:curMentions.join(','),linked_upload_id:linkedUploadId};
   let error;
   if(id){({error}=await db.from('meeting_items').update(payload).eq('id',id));}
   else{
@@ -2211,7 +2236,7 @@ function renderHome(){
       }),
       ...mTasks.map(t=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(127,119,221,.3)">
         <span onclick="completeMeetingTask('${t.id}')" style="width:14px;height:14px;border:1.5px solid #bbb;border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center" title="완료 처리"></span>
-        <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</span>
+        <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${stripHtml(t.content)}</span>
         <span style="font-size:9px;flex-shrink:0;color:#3D4D1A">📋회의</span>
       </div>`),
       ...eTasks.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 8px;background:#fff;border-radius:6px;border:0.5px solid rgba(0,0,0,.08)">
@@ -2317,11 +2342,12 @@ function runGlobalSearch(q){
   });
   // 회의록 항목
   meetingItemData.forEach(it=>{
-    if((it.content||'').toLowerCase().includes(query)){
+    const plainText=stripHtml(it.content);
+    if(plainText.toLowerCase().includes(query)){
       const mt=meetingData.find(m=>m.id===it.meeting_id);
       const when=mt?`${mt.year}.${mt.month}월 ${mt.week}주차`:'';
       const secLabel={notice:'공지사항',review:'업로드 리뷰',idea:'아이템 논의',seulgi:'슬기',somi:'소미',etc:'기타'}[it.section]||it.section;
-      results.push({cat:'회의록',catColor:'#3D4D1A',title:it.content,sub:`${when} · ${secLabel}`,page:'meeting',meetingMonth:mt?.month,meetingYear:mt?.year,meetingWeek:mt?.week});
+      results.push({cat:'회의록',catColor:'#3D4D1A',title:plainText,sub:`${when} · ${secLabel}`,page:'meeting',meetingMonth:mt?.month,meetingYear:mt?.year,meetingWeek:mt?.week});
     }
   });
 
