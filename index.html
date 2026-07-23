@@ -377,11 +377,14 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
       <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:6px">촬영 방식</label>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="sh-self-label-1">
-          <input type="radio" name="sh-self" value="1" style="width:auto;margin:0" onchange="onSelfShootChange()"> 🎒 장비불출 (PD 자체 촬영)
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="sh-self-label-self">
+          <input type="radio" name="sh-self" value="self" style="width:auto;margin:0" onchange="onSelfShootChange()"> 🎒 장비불출 (PD 자체 촬영)
         </label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="sh-self-label-0">
-          <input type="radio" name="sh-self" value="0" checked style="width:auto;margin:0" onchange="onSelfShootChange()"> 📹 촬영팀 동행
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="sh-self-label-team">
+          <input type="radio" name="sh-self" value="team" checked style="width:auto;margin:0" onchange="onSelfShootChange()"> 📹 촬영팀 동행
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="sh-self-label-none">
+          <input type="radio" name="sh-self" value="none" style="width:auto;margin:0" onchange="onSelfShootChange()"> 🤳 해당없음 (셀프캠)
         </label>
       </div>
       <div id="sh-equipment-wrap" style="display:none;margin-bottom:14px">
@@ -1063,14 +1066,30 @@ function switchCalView(mode){
 // ── 촬영 ──
 const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디','셀프캠'];
 const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','셀프캠':'#8B7355'};
+let _shootPastOpen={somi:false,seulgi:false};
+function toggleShootPast(ch){
+  _shootPastOpen[ch]=!_shootPastOpen[ch];
+  renderShoot();
+}
+
 function renderShoot(){
+  const todayMid=new Date(); todayMid.setHours(0,0,0,0);
+
   ['somi','seulgi'].forEach(ch=>{
     const chColor=ch==='seulgi'?'#B45309':'#DB2777';
     const list=uploadData.filter(u=>u.channel===ch).sort((a,b)=>new Date(a.date)-new Date(b.date));
     const el=document.getElementById('shoot-list-'+ch);
     if(!el) return;
 
-    el.innerHTML=list.map(u=>{
+    // 기준일: 촬영일이 있으면 가장 늦은 촬영일, 없으면 업로드일
+    const refDate=u=>{
+      const ds=shootDatesData.filter(d=>d.upload_id===u.id).map(d=>new Date(d.shoot_date));
+      if(ds.length) return new Date(Math.max(...ds));
+      return u.date?new Date(u.date):null;
+    };
+    const isPast=u=>{ const d=refDate(u); return d&&d<todayMid; };
+
+    const makeShootCard=u=>{
       const sh=shootData.find(s=>s.upload_id===u.id)||{};
       const checkedMembers=(sh.members||'').split(',').map(s=>s.trim()).filter(Boolean);
       const hasMemo=sh.memo&&sh.memo.trim();
@@ -1087,9 +1106,14 @@ function renderShoot(){
       }).join('');
 
       // 촬영 방식 배지
-      const selfBadge=sh.self_shoot
+      const shType=sh.shoot_type||(sh.self_shoot?'self':(sh.id?'team':''));
+      const selfBadge=shType==='self'
         ? `<span style="font-size:10px;padding:2px 8px;border-radius:5px;font-weight:600;background:#EAF3DE;color:#3D4D1A;border:0.5px solid #A3B565;white-space:nowrap">🎒 장비불출</span>`
-        : (sh.id?`<span style="font-size:10px;padding:2px 8px;border-radius:5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-secondary);white-space:nowrap">📹 촬영팀</span>`:'');
+        : shType==='none'
+        ? `<span style="font-size:10px;padding:2px 8px;border-radius:5px;font-weight:500;background:#F2F2F2;color:#777;white-space:nowrap">🤳 셀프캠</span>`
+        : shType==='team'
+        ? `<span style="font-size:10px;padding:2px 8px;border-radius:5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-secondary);white-space:nowrap">📹 촬영팀</span>`
+        : '';
 
       return `<div onclick="openShootModal('${u.id}')" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${chColor};border-radius:var(--border-radius-lg);padding:12px 14px;cursor:pointer;transition:box-shadow .1s" onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,.06)'" onmouseout="this.style.boxShadow='none'">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
@@ -1098,12 +1122,30 @@ function renderShoot(){
         </div>
         ${memberChips?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${memberChips}</div>`:''}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span style="font-size:11px;color:var(--color-text-secondary)">${sh.shoot_team?'촬영팀: '+sh.shoot_team:(sh.self_shoot?'촬영팀 없음':'')}</span>
+          <span style="font-size:11px;color:var(--color-text-secondary)">${sh.shoot_team?'촬영팀: '+sh.shoot_team:(shType==='self'?'촬영팀 없음':shType==='none'?'촬영 없이 전달':'')}</span>
           ${selfBadge}
         </div>
-        ${sh.self_shoot&&sh.equipment_memo?`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;padding-top:6px;border-top:0.5px solid var(--color-border-tertiary)">🎒 ${sh.equipment_memo}</div>`:''}
+        ${shType==='self'&&sh.equipment_memo?`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;padding-top:6px;border-top:0.5px solid var(--color-border-tertiary)">🎒 ${sh.equipment_memo}</div>`:''}
       </div>`;
-    }).join('') || `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 촬영이 없어요</div>`;
+    };
+
+    if(!list.length){
+      el.innerHTML=`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 촬영이 없어요</div>`;
+      return;
+    }
+    const past=list.filter(isPast);
+    const upcoming=list.filter(u=>!isPast(u));
+    let html='';
+    if(past.length){
+      const open=_shootPastOpen[ch];
+      html+=`<div onclick="toggleShootPast('${ch}')" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);cursor:pointer;font-size:11px;color:var(--color-text-secondary);user-select:none;margin-bottom:2px">
+        <i class="ti ti-chevron-${open?'down':'right'}" style="font-size:13px"></i>
+        지난 촬영 ${past.length}건 ${open?'접기':'펼치기'}
+      </div>`;
+      if(open) html+=past.map(makeShootCard).join('');
+    }
+    html+=upcoming.map(makeShootCard).join('');
+    el.innerHTML=html;
   });
   renderShootStats();
 }
@@ -1112,18 +1154,21 @@ function renderShoot(){
 function renderShootStats(){
   const el=document.getElementById('shoot-stats');
   if(!el) return;
-  // 촬영 정보가 입력된 건만 집계 대상
-  const recorded=shootData.filter(s=>s.members||s.shoot_team||s.self_shoot);
-  const total=recorded.length;
-  const selfCount=recorded.filter(s=>s.self_shoot).length;
-  const teamCount=total-selfCount;
-  const pct=total>0?Math.round(selfCount/total*100):0;
+  // 촬영 방식이 지정된 건만 집계 대상
+  const recorded=shootData.filter(s=>s.shoot_type||s.self_shoot||s.members||s.shoot_team);
+  const typeOf=s=>s.shoot_type||(s.self_shoot?'self':'team');
+  const selfCount=recorded.filter(s=>typeOf(s)==='self').length;
+  const teamCount=recorded.filter(s=>typeOf(s)==='team').length;
+  const noneCount=recorded.filter(s=>typeOf(s)==='none').length;
+  // 비율은 실제 촬영건(장비불출+촬영팀) 기준 — 셀프캠은 제외
+  const shootTotal=selfCount+teamCount;
+  const pct=shootTotal>0?Math.round(selfCount/shootTotal*100):0;
   el.innerHTML=`
     <div style="flex:1;padding:12px 16px;background:#EAF3DE;border:0.5px solid #A3B565;border-radius:var(--border-radius-lg)">
       <div style="font-size:11px;color:#3D4D1A;margin-bottom:3px">🎒 장비불출 (PD 자체 촬영)</div>
       <div style="display:flex;align-items:baseline;gap:6px">
         <span style="font-size:22px;font-weight:600;color:#3D4D1A">${selfCount}건</span>
-        <span style="font-size:12px;color:#5a6b30">/ 전체 ${total}건 · ${pct}%</span>
+        <span style="font-size:12px;color:#5a6b30">/ 촬영 ${shootTotal}건 · ${pct}%</span>
       </div>
     </div>
     <div style="flex:1;padding:12px 16px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
@@ -1131,6 +1176,13 @@ function renderShootStats(){
       <div style="display:flex;align-items:baseline;gap:6px">
         <span style="font-size:22px;font-weight:600">${teamCount}건</span>
         <span style="font-size:12px;color:var(--color-text-secondary)">/ ${100-pct}%</span>
+      </div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#F2F2F2;border-radius:var(--border-radius-lg)">
+      <div style="font-size:11px;color:#777;margin-bottom:3px">🤳 해당없음 (셀프캠)</div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <span style="font-size:22px;font-weight:600;color:#777">${noneCount}건</span>
+        <span style="font-size:12px;color:#999">비율 제외</span>
       </div>
     </div>`;
 }
@@ -1160,9 +1212,10 @@ function openShootModal(uploadId){
   document.getElementById('sh-modal-channel').innerHTML=`<span style="${chC};font-weight:600">${chL}</span> · 업로드 ${u.date}`;
   document.getElementById('sh-team-input').value=sh.shoot_team||'';
   document.getElementById('sh-memo-input').value=sh.memo||'';
-  // 촬영 방식 (장비불출 여부) + 장비 메모
-  const isSelf=sh.self_shoot===true;
-  document.querySelector(`input[name="sh-self"][value="${isSelf?'1':'0'}"]`).checked=true;
+  // 촬영 방식 (장비불출/촬영팀/해당없음) + 장비 메모
+  const shType=sh.shoot_type||(sh.self_shoot?'self':'team');
+  const radio=document.querySelector(`input[name="sh-self"][value="${shType}"]`);
+  if(radio) radio.checked=true;
   document.getElementById('sh-equipment-input').value=sh.equipment_memo||'';
   onSelfShootChange();
 
@@ -1202,7 +1255,7 @@ async function saveShoot(){
   const checked=[...document.querySelectorAll('.sh-member-cb:checked')].map(cb=>cb.value);
   const team=document.getElementById('sh-team-input').value.trim();
   const memo=document.getElementById('sh-memo-input').value.trim();
-  const selfShoot=document.querySelector('input[name="sh-self"]:checked')?.value==='1';
+  const shootType=document.querySelector('input[name="sh-self"]:checked')?.value||'team';
   const equipmentMemo=document.getElementById('sh-equipment-input').value.trim();
 
   // 촬영일 수집
@@ -1214,7 +1267,7 @@ async function saveShoot(){
 
   // shoots 저장
   const existing=shootData.find(s=>s.upload_id===uploadId);
-  const payload={upload_id:uploadId, members:checked.join(', '), shoot_team:team, memo, self_shoot:selfShoot, equipment_memo:equipmentMemo};
+  const payload={upload_id:uploadId, members:checked.join(', '), shoot_team:team, memo, shoot_type:shootType, self_shoot:shootType==='self', equipment_memo:equipmentMemo};
   let error;
   if(existing){
     ({error}=await db.from('shoots').update(payload).eq('id',existing.id));
@@ -1237,21 +1290,25 @@ async function saveShoot(){
 
 // 촬영 방식 라디오 변경 시 UI 갱신 (장비 메모칸 표시/숨김 + 라디오 강조)
 function onSelfShootChange(){
-  const val=document.querySelector('input[name="sh-self"]:checked')?.value;
+  const val=document.querySelector('input[name="sh-self"]:checked')?.value||'team';
   const wrap=document.getElementById('sh-equipment-wrap');
-  if(wrap) wrap.style.display=val==='1'?'block':'none';
-  // 선택된 라디오 강조
-  const l1=document.getElementById('sh-self-label-1');
-  const l0=document.getElementById('sh-self-label-0');
-  if(l1&&l0){
-    if(val==='1'){
-      l1.style.borderColor='#A3B565'; l1.style.background='#EAF3DE';
-      l0.style.borderColor='var(--color-border-secondary)'; l0.style.background='transparent';
+  if(wrap) wrap.style.display=val==='self'?'block':'none';
+  const styles={
+    self:{border:'#A3B565', bg:'#EAF3DE'},
+    team:{border:'#C6DA81', bg:'#F4F8E8'},
+    none:{border:'#B0B0B0', bg:'#F2F2F2'},
+  };
+  ['self','team','none'].forEach(k=>{
+    const el=document.getElementById('sh-self-label-'+k);
+    if(!el) return;
+    if(k===val){
+      el.style.borderColor=styles[k].border;
+      el.style.background=styles[k].bg;
     } else {
-      l0.style.borderColor='#C6DA81'; l0.style.background='#F4F8E8';
-      l1.style.borderColor='var(--color-border-secondary)'; l1.style.background='transparent';
+      el.style.borderColor='var(--color-border-secondary)';
+      el.style.background='transparent';
     }
-  }
+  });
 }
 
 // ── 회의 ──
