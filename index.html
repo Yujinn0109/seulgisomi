@@ -299,22 +299,15 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     </div>
   </div>
 
-  <!-- 2열 카드 리스트 (소미 | 슬기) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
-    <!-- 소미 -->
-    <div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span>
-      </div>
-      <div id="upload-list-somi" style="display:flex;flex-direction:column;gap:6px"></div>
+  <!-- 주차별 정렬 리스트 (소미 | 슬기 같은 시점끼리) -->
+  <div style="margin-bottom:24px">
+    <!-- 헤더 -->
+    <div style="display:grid;grid-template-columns:76px 1fr 1fr;gap:10px;margin-bottom:10px;position:sticky;top:0">
+      <div></div>
+      <div><span class="badge badge-somi" style="font-size:12px;padding:3px 10px">소미</span></div>
+      <div><span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span></div>
     </div>
-    <!-- 슬기 -->
-    <div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <span class="badge badge-seulgi" style="font-size:12px;padding:3px 10px">슬기</span>
-      </div>
-      <div id="upload-list-seulgi" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
+    <div id="upload-week-rows"></div>
   </div>
 
   <!-- 타임라인 캘린더 -->
@@ -2094,40 +2087,86 @@ function renderUpload(){
   const somiData=data.filter(u=>u.channel==='somi');
   const seulgiData=data.filter(u=>u.channel==='seulgi');
 
-  const somiEl=document.getElementById('upload-list-somi');
-  const seulgiEl=document.getElementById('upload-list-seulgi');
-
   // 오늘 기준 지난 항목 분리 (업로드일이 오늘보다 이전)
   const todayMid=new Date(); todayMid.setHours(0,0,0,0);
   const isPast=u=>u.date&&new Date(u.date)<todayMid;
 
-  const buildList=(list,ch)=>{
-    if(!list.length) return `<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
-    const past=list.filter(isPast);
-    const upcoming=list.filter(u=>!isPast(u));
-    let html='';
-    // 지난 항목 접기 (있을 때만)
-    if(past.length){
-      const open=_uploadPastOpen[ch];
-      html+=`<div onclick="toggleUploadPast('${ch}')" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);cursor:pointer;font-size:11px;color:var(--color-text-secondary);user-select:none;margin-bottom:2px">
-        <i class="ti ti-chevron-${open?'down':'right'}" style="font-size:13px"></i>
-        지난 항목 ${past.length}개 ${open?'접기':'펼치기'}
-      </div>`;
-      if(open) html+=past.map(makeCard).join('');
-    }
-    // 예정 항목은 항상 표시
-    html+=upcoming.map(makeCard).join('');
-    if(!upcoming.length&&!past.length) html=`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px">등록된 일정이 없어요</div>`;
-    return html;
+  // 주차 키 생성: "2026-W33" 형태 (연도+ISO주차 대신 월+주차로 라벨링)
+  const weekKey=dateStr=>{
+    const d=new Date(dateStr);
+    // 그 달의 몇 번째 주인지 (1일 기준)
+    const week=Math.ceil(d.getDate()/7);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-W${week}`;
+  };
+  const weekLabel=key=>{
+    const [y,m,w]=key.split('-');
+    return {main:`${parseInt(m)}/${(parseInt(w.replace('W',''))-1)*7+1}`, sub:`${parseInt(m)}월 ${w.replace('W','')}주`};
   };
 
-  if(somiEl) somiEl.innerHTML=buildList(somiData,'somi');
-  if(seulgiEl) seulgiEl.innerHTML=buildList(seulgiData,'seulgi');
+  // 지난/예정 분리
+  const somiPast=somiData.filter(isPast), somiUp=somiData.filter(u=>!isPast(u));
+  const seulgiPast=seulgiData.filter(isPast), seulgiUp=seulgiData.filter(u=>!isPast(u));
 
+  // 예정 항목을 주차별로 그룹핑
+  const groupByWeek=list=>{
+    const m={};
+    list.forEach(u=>{ if(!u.date) return; const k=weekKey(u.date); (m[k]=m[k]||[]).push(u); });
+    return m;
+  };
+  const somiWeeks=groupByWeek(somiUp);
+  const seulgiWeeks=groupByWeek(seulgiUp);
+
+  // 모든 주차 키 합집합 (시간순)
+  const allWeeks=[...new Set([...Object.keys(somiWeeks),...Object.keys(seulgiWeeks)])].sort();
+
+  const rowsEl=document.getElementById('upload-week-rows');
+  if(!rowsEl){ renderTimeline(); return; }
+
+  let html='';
+
+  // 지난 항목 접기 (소미/슬기 각각 개수 표시, 펼치면 각 열에)
+  const totalPast=somiPast.length+seulgiPast.length;
+  if(totalPast){
+    const open=_uploadPastOpen.all;
+    html+=`<div onclick="toggleUploadPast('all')" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);cursor:pointer;font-size:11px;color:var(--color-text-secondary);user-select:none;margin-bottom:10px">
+      <i class="ti ti-chevron-${open?'down':'right'}" style="font-size:13px"></i>
+      지난 항목 ${totalPast}개 ${open?'접기':'펼치기'} <span style="color:#bbb">(소미 ${somiPast.length} · 슬기 ${seulgiPast.length})</span>
+    </div>`;
+    if(open){
+      // 지난 항목도 주차별 정렬
+      const spWeeks=groupByWeek(somiPast), gpWeeks=groupByWeek(seulgiPast);
+      const pastWeeks=[...new Set([...Object.keys(spWeeks),...Object.keys(gpWeeks)])].sort();
+      pastWeeks.forEach(wk=>{ html+=weekRow(wk, spWeeks[wk]||[], gpWeeks[wk]||[], weekLabel, makeCard, true); });
+      html+=`<div style="height:12px;border-bottom:1px dashed var(--color-border-secondary);margin-bottom:12px"></div>`;
+    }
+  }
+
+  // 예정 주차별 행
+  if(!allWeeks.length&&!totalPast){
+    html+=`<div style="font-size:12px;color:var(--color-text-secondary);padding:16px;text-align:center">등록된 일정이 없어요</div>`;
+  }
+  allWeeks.forEach(wk=>{ html+=weekRow(wk, somiWeeks[wk]||[], seulgiWeeks[wk]||[], weekLabel, makeCard, false); });
+
+  rowsEl.innerHTML=html;
   renderTimeline();
 }
 
-let _uploadPastOpen={somi:false,seulgi:false};
+// 주차 행 하나 생성 (날짜축 | 소미 | 슬기)
+function weekRow(wkKey, somiItems, seulgiItems, weekLabel, makeCard, isPast){
+  const lbl=weekLabel(wkKey);
+  const emptyCell=`<div style="font-size:10px;color:#ccc;padding:12px;text-align:center;border:1px dashed var(--color-border-tertiary);border-radius:var(--border-radius-md)">—</div>`;
+  const somiHtml=somiItems.length?somiItems.map(makeCard).join(''):emptyCell;
+  const seulgiHtml=seulgiItems.length?seulgiItems.map(makeCard).join(''):emptyCell;
+  return `<div style="display:grid;grid-template-columns:76px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start;${isPast?'opacity:.75':''}">
+    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);padding-top:9px;line-height:1.4">
+      ${lbl.main}<br><span style="font-size:9px;color:#aaa;font-weight:400">${lbl.sub}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">${somiHtml}</div>
+    <div style="display:flex;flex-direction:column;gap:6px">${seulgiHtml}</div>
+  </div>`;
+}
+
+let _uploadPastOpen={all:false};
 function toggleUploadPast(ch){
   _uploadPastOpen[ch]=!_uploadPastOpen[ch];
   renderUpload();
