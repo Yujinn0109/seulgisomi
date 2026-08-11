@@ -286,8 +286,13 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <button class="btn btn-primary" onclick="openAddUpload()"><i class="ti ti-plus"></i> 일정 추가</button>
     </div>
   </div>
-  <!-- 담당자·상태 필터 칩 -->
+  <!-- 유형·담당자·상태 필터 칩 -->
   <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--color-text-secondary);margin-right:2px">유형</span>
+      <div id="up-type-filter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+    </div>
+    <div style="width:1px;background:var(--color-border-tertiary);align-self:stretch"></div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--color-text-secondary);margin-right:2px">담당자</span>
       <div id="up-member-filter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
@@ -619,6 +624,15 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <input type="hidden" id="up-edit-id">
     <label>채널</label>
     <select id="up-channel"><option value="seulgi">슬기</option><option value="somi">소미</option></select>
+    <label>영상 유형</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="up-type-label-long">
+        <input type="radio" name="up-type" value="long" checked style="width:auto;margin:0" onchange="onUploadTypeChange()"> 🎬 롱폼
+      </label>
+      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border:1.5px solid var(--color-border-secondary);border-radius:7px;cursor:pointer;font-size:13px" id="up-type-label-short">
+        <input type="radio" name="up-type" value="short" style="width:auto;margin:0" onchange="onUploadTypeChange()"> 📱 쇼츠
+      </label>
+    </div>
     <label>영상 제목</label><input type="text" id="up-title" placeholder="제목 입력">
     <label>담당자 <span style="font-weight:400;color:#999">(선택하면 편집 기간 입력 가능)</span></label>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px">
@@ -878,7 +892,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 // ════════════════════════════════════════════
 const SUPABASE_URL = 'https://rteqfowdlldleivcxiui.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZXFmb3dkbGxkbGVpdmN4aXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTY4NTAsImV4cCI6MjA5NDMzMjg1MH0.sOzPn2OY7fxs7ZQ-zBvN7595W8Vu5W_W2xUhU6qsbRY';
-const GCAL_API_KEY = 'AIzaSyAtpiK3RtO56ebOTPpvLN_RduLL4RdG7qQ';
+const GCAL_API_KEY = 'AIzaSyC734wSdpE16JUwdvM9DFWQ5sR6C_6PMo0';
 const GCAL_IDS = [
   'ep.zinny@gmail.com',
   '5b4e1758e3f442eb16aa8a8c4cceb0c70622185b1421e7eb138fcc121bd307da@group.calendar.google.com',
@@ -2004,7 +2018,7 @@ async function deleteAdFromModal(){
 }
 
 // ── 업로드 ──
-let upMemberFilter='all', upStatusFilter='all';
+let upMemberFilter='all', upStatusFilter='all', upTypeFilter='all';
 const UP_FILTER_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','외주','미정'];
 const UP_FILTER_STATUS=[['plan','기획'],['shoot','촬영 완료'],['edit','편집 중'],['review','검수 중'],['done','업로드 완료']];
 
@@ -2020,6 +2034,14 @@ function filterUpload(f,el){
 function renderUploadFilterChips(){
   const memberEl=document.getElementById('up-member-filter');
   const statusEl=document.getElementById('up-status-filter');
+  const typeEl=document.getElementById('up-type-filter');
+  if(typeEl){
+    const chip=(val,label)=>{
+      const on=upTypeFilter===val;
+      return `<button onclick="setUpTypeFilter('${val}')" style="padding:2px 9px;border-radius:12px;border:0.5px solid ${on?'#C6DA81':'var(--color-border-secondary)'};background:${on?'#C6DA81':'var(--color-background-primary)'};color:${on?'#3D4D1A':'var(--color-text-secondary)'};font-size:11px;cursor:pointer;font-weight:${on?'500':'400'}">${label}</button>`;
+    };
+    typeEl.innerHTML=chip('all','전체')+chip('long','🎬 롱폼')+chip('short','📱 쇼츠');
+  }
   if(memberEl){
     const chip=(val,label)=>{
       const on=upMemberFilter===val;
@@ -2037,6 +2059,7 @@ function renderUploadFilterChips(){
 }
 function setUpMemberFilter(v){ upMemberFilter=v; renderUpload(); }
 function setUpStatusFilter(v){ upStatusFilter=v; renderUpload(); }
+function setUpTypeFilter(v){ upTypeFilter=v; renderUpload(); }
 
 
 function renderUpload(){
@@ -2052,6 +2075,10 @@ function renderUpload(){
   if(upStatusFilter!=='all'){
     data=data.filter(u=>u.status===upStatusFilter);
   }
+  // 유형 필터 (롱폼/쇼츠)
+  if(upTypeFilter!=='all'){
+    data=data.filter(u=>(u.video_type||'long')===upTypeFilter);
+  }
   data.sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   const statusColors={plan:'#C6DA81',shoot:'#F76754',edit:'#378ADD',review:'#BA7517',done:'#1D9E75'};
@@ -2061,6 +2088,10 @@ function renderUpload(){
     const sColor=statusColors[u.status]||'#888';
     const isDone=u.status==='done';
     const hasEditDates=u.edit_start||u.edit_end;
+    const isShort=u.video_type==='short';
+    const typeBadge=isShort
+      ? `<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:#FDECEC;color:#D14343;flex-shrink:0">📱 쇼츠</span>`
+      : `<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:#EAF3DE;color:#3D4D1A;flex-shrink:0">🎬 롱폼</span>`;
     return `<div onclick="openEditUpload('${u.id}')" style="
       background:var(--color-background-primary);
       border:0.5px solid var(--color-border-tertiary);
@@ -2071,7 +2102,8 @@ function renderUpload(){
       transition:box-shadow .15s;
       opacity:${isDone?.65:1}
     " onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        ${typeBadge}
         ${u.savebon?`<span style="font-size:10px;background:#FFF8E1;color:#F59E0B;padding:1px 6px;border-radius:4px;font-weight:600;border:0.5px solid #F59E0B;flex-shrink:0">⭐</span>`:''}
         <span style="font-size:12px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isDone?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${u.title}</span>
         <span class="status-badge ${s.cls}" style="flex-shrink:0;font-size:10px">${s.label}</span>
@@ -2859,8 +2891,25 @@ function openAddUpload(){
   document.getElementById('up-date').value='';
   document.getElementById('up-status').value='plan';
   document.getElementById('up-savebon').checked=false;
+  document.querySelector('input[name="up-type"][value="long"]').checked=true;
+  onUploadTypeChange();
   document.getElementById('up-delete-btn').style.display='none';
   document.getElementById('modal-upload').style.display='flex';
+}
+
+function onUploadTypeChange(){
+  const val=document.querySelector('input[name="up-type"]:checked')?.value||'long';
+  const long=document.getElementById('up-type-label-long');
+  const short=document.getElementById('up-type-label-short');
+  if(long&&short){
+    if(val==='long'){
+      long.style.borderColor='#A3B565'; long.style.background='#EAF3DE'; long.style.color='#3D4D1A';
+      short.style.borderColor='var(--color-border-secondary)'; short.style.background='transparent'; short.style.color='';
+    } else {
+      short.style.borderColor='#D14343'; short.style.background='#FDECEC'; short.style.color='#D14343';
+      long.style.borderColor='var(--color-border-secondary)'; long.style.background='transparent'; long.style.color='';
+    }
+  }
 }
 
 function openEditUpload(id){
@@ -2887,6 +2936,10 @@ function openEditUpload(id){
   document.getElementById('up-date').value=u.date;
   document.getElementById('up-status').value=u.status;
   document.getElementById('up-savebon').checked=!!u.savebon;
+  const vt=u.video_type||'long';
+  const vtRadio=document.querySelector(`input[name="up-type"][value="${vt}"]`);
+  if(vtRadio) vtRadio.checked=true;
+  onUploadTypeChange();
   document.getElementById('up-delete-btn').style.display='inline-flex';
   document.getElementById('modal-upload').style.display='flex';
 }
@@ -3015,7 +3068,8 @@ async function saveUpload(){
     channel:document.getElementById('up-channel').value,
     title, member:checked.join(', '), date,
     status:document.getElementById('up-status').value,
-    savebon:document.getElementById('up-savebon').checked
+    savebon:document.getElementById('up-savebon').checked,
+    video_type:document.querySelector('input[name="up-type"]:checked')?.value||'long'
   };
   let error, uploadId=id;
   if(id){
