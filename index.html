@@ -129,6 +129,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 }
 [contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:var(--color-text-secondary);opacity:.6}
 [contenteditable] b, [contenteditable] strong{font-weight:700}
+@media(max-width:720px){#admin-view{padding:14px!important}.admin-summary-grid{grid-template-columns:repeat(2,1fr)!important}.admin-two-col{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body>
@@ -150,7 +151,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <div class="toast" id="toast"></div>
 
 <!-- 팀장 전용 통계 오버레이 -->
-<div id="admin-view" style="display:none;position:fixed;inset:0;background:var(--color-background-secondary);z-index:9998;overflow-y:auto;padding:24px">
+<div id="admin-view" style="display:none;position:fixed;inset:0;background:#F4F5F7;z-index:9998;overflow-y:auto;padding:24px">
   <div style="max-width:900px;margin:0 auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div>
@@ -3475,7 +3476,7 @@ function renderAdminStats(){
   const high=rankScore.filter(x=>status(x)==='high');
   const activeTotal=rankScore.reduce((a,x)=>a+x.active,0);
   const overdueTotal=rankScore.reduce((a,x)=>a+x.overdue,0);
-  html+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+  html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.03)"><div style="font-size:14px;font-weight:700;margin-bottom:12px">👀 지금 팀 상황</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" class="admin-summary-grid">
     <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
       <div style="font-size:10px;color:var(--color-text-secondary)">현재 편집 중</div><div style="font-size:24px;font-weight:700;margin-top:4px">${activeTotal}<span style="font-size:11px;font-weight:400;color:#888">건</span></div>
     </div>
@@ -3488,10 +3489,10 @@ function renderAdminStats(){
     <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
       <div style="font-size:10px;color:var(--color-text-secondary)">과부하 주의</div><div style="font-size:24px;font-weight:700;margin-top:4px">${high.length}<span style="font-size:11px;font-weight:400;color:#888">명</span></div>
     </div>
-  </div>`;
+  </div></div>`;
 
   // 1. 가중 업무량
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;margin-bottom:14px">
+  html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px;margin-bottom:14px">
     <div style="font-size:14px;font-weight:600;margin-bottom:4px">📊 팀원별 업무량</div>
     <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">편집 건수 + 편집 기간 + 업무 겹침을 반영한 상대 업무량</div>
     <div style="display:flex;flex-direction:column;gap:12px">`;
@@ -3499,7 +3500,7 @@ function renderAdminStats(){
     const st=status(x), pct=Math.round(x.score/maxScore*100), c=MC(x.name);
     html+=`<div style="display:grid;grid-template-columns:52px 1fr 82px;gap:10px;align-items:center">
       <span style="font-size:12px;font-weight:600">${x.name}</span>
-      <div><div style="height:22px;background:var(--color-background-secondary);border-radius:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c};border-radius:6px;min-width:${x.score?'28px':'0'}"></div></div>
+      <div><div style="height:22px;background:#EEF0F3;border-radius:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c};border-radius:6px;min-width:${x.score?'28px':'0'}"></div></div>
       <div style="font-size:9px;color:#999;margin-top:3px">편집 ${x.edit} · 구성안 ${x.plan} · 현재 ${x.active} · 겹침 ${x.overlap}</div></div>
       <div style="text-align:right;font-size:11px"><b>${statusIcon[st]} ${statusText[st]}</b><br><span style="color:#999">${x.score.toFixed(1)}pt</span></div>
     </div>`;
@@ -3507,7 +3508,7 @@ function renderAdminStats(){
   html+=`</div></div>`;
 
   // 2. 이번 주 리스크 / 업무 집중 구간
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;margin-bottom:14px">
+  html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px;margin-bottom:14px">
     <div style="font-size:14px;font-weight:600;margin-bottom:4px">⚠️ 이번 주 체크할 사람</div>
     <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px">현재 편집 중이거나 일정이 겹치는 팀원부터 확인하세요.</div>`;
   const risk=rankScore.filter(x=>x.active||x.overlap||x.overdue).sort((a,b)=>(b.active+b.overlap+b.overdue)-(a.active+a.overlap+a.overdue));
@@ -3515,7 +3516,7 @@ function renderAdminStats(){
     html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
     risk.slice(0,6).forEach(x=>{
       const reasons=[]; if(x.active) reasons.push(`진행 ${x.active}건`); if(x.overlap) reasons.push(`겹침 ${x.overlap}건`); if(x.overdue) reasons.push(`마감 경과 ${x.overdue}건`);
-      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:var(--color-background-secondary);border-radius:8px"><span style="font-size:12px;font-weight:600">${statusIcon[status(x)]} ${x.name}</span><span style="font-size:10px;color:var(--color-text-secondary)">${reasons.join(' · ')}</span></div>`;
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:#F3F5F7;border-radius:8px"><span style="font-size:12px;font-weight:600">${statusIcon[status(x)]} ${x.name}</span><span style="font-size:10px;color:var(--color-text-secondary)">${reasons.join(' · ')}</span></div>`;
     });
     html+=`</div>`;
   } else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">현재 특별히 겹치는 업무가 없어요.</div>`;
@@ -3523,8 +3524,8 @@ function renderAdminStats(){
 
   // 3. 기존 롱폼/쇼츠
   const ls={}; ADMIN_MEMBERS.forEach(m=>ls[m]={long:stats[m].long,short:stats[m].short});
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="admin-two-col">
+  <div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px">
     <div style="font-size:14px;font-weight:600;margin-bottom:14px">🎬 롱폼 / 📱 쇼츠 분담</div><div style="display:flex;flex-direction:column;gap:9px">`;
   ADMIN_MEMBERS.map(m=>({name:m,...ls[m],total:ls[m].long+ls[m].short})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).forEach(x=>{
     const lp=x.total?Math.round(x.long/x.total*100):0;
@@ -3536,15 +3537,15 @@ function renderAdminStats(){
   const selfContrib={}; ADMIN_MEMBERS.forEach(m=>selfContrib[m]=0);
   shootData.filter(s=>s.self_shoot||s.shoot_type==='self').forEach(s=>(s.members||'').split(',').map(x=>x.trim()).forEach(m=>{if(selfContrib[m]!==undefined)selfContrib[m]++;}));
   const selfArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:selfContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:14px">🎒 장비불출 기여도</div>`;
+  html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:14px">🎒 장비불출 기여도</div>`;
   if(selfArr.length){html+=`<div style="display:flex;flex-direction:column;gap:9px">`;selfArr.forEach((x,i)=>html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:${i===0?'#EAF3DE':'var(--color-background-secondary)'};border-radius:7px"><span style="font-size:12px;font-weight:500">${['🥇','🥈','🥉'][i]||'　'} ${x.name}</span><span style="font-size:12px;font-weight:600">${x.cnt}회</span></div>`);html+=`</div>`;}else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">장비불출 기록이 없어요</div>`;
   html+=`</div></div>`;
 
   // 5. 광고
   const adContrib={}; ADMIN_MEMBERS.forEach(m=>adContrib[m]=0); adData.forEach(a=>{if(adContrib[a.member]!==undefined)adContrib[a.member]++;});
   const adArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:adContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:4px">📢 광고 담당 현황</div><div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">진행 브랜드 수</div>`;
-  if(adArr.length){html+=`<div style="display:flex;gap:8px;flex-wrap:wrap">`;adArr.forEach(x=>html+=`<div style="flex:1;min-width:80px;text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:8px"><div style="font-size:22px;font-weight:700;color:${MC(x.name)}">${x.cnt}</div><div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.name}</div></div>`);html+=`</div>`;}else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">광고 데이터가 없어요</div>`;
+  html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:4px">📢 광고 담당 현황</div><div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">진행 브랜드 수</div>`;
+  if(adArr.length){html+=`<div style="display:flex;gap:8px;flex-wrap:wrap">`;adArr.forEach(x=>html+=`<div style="flex:1;min-width:80px;text-align:center;padding:12px;background:#F3F5F7;border-radius:8px"><div style="font-size:22px;font-weight:700;color:${MC(x.name)}">${x.cnt}</div><div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.name}</div></div>`);html+=`</div>`;}else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">광고 데이터가 없어요</div>`;
   html+=`</div>`;
   el.innerHTML=html;
 }
