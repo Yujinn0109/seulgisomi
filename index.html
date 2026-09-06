@@ -151,7 +151,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <div class="toast" id="toast"></div>
 
 <!-- 팀장 전용 통계 오버레이 -->
-<div id="admin-view" style="display:none;position:fixed;inset:0;background:#F4F5F7;z-index:9998;overflow-y:auto;padding:24px">
+<div id="admin-view" style="display:none;position:fixed;inset:0;background:#F4F5F7;z-index:10001;overflow-y:auto;padding:24px">
   <div style="max-width:900px;margin:0 auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div>
@@ -1027,13 +1027,103 @@ async function loadData(){
   setLoading(false);
 }
 
+// ── Realtime 최적화: 변경된 테이블만 다시 읽고, 연속 변경은 한 번으로 묶기 ──
+let realtimeTimer=null;
+let realtimePending=new Set();
+let realtimeWaitingForModal=false;
+
+async function refreshRealtimeTable(table){
+  try{
+    switch(table){
+      case 'events': { const r=await db.from('events').select('*').order('date'); events=r.data||[]; break; }
+      case 'uploads': { const r=await db.from('uploads').select('*').order('date'); uploadData=r.data||[]; break; }
+      case 'notices': { const r=await db.from('notices').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}); noticeData=r.data||[]; break; }
+      case 'resources': { const r=await db.from('resources').select('*').order('created_at'); resourceData=r.data||[]; break; }
+      case 'resource_memos': { const r=await db.from('resource_memos').select('*').order('created_at'); memoData=r.data||[]; break; }
+      case 'handovers': { const r=await db.from('handovers').select('*').order('created_at',{ascending:false}); handoverData=r.data||[]; break; }
+      case 'member_tasks': {
+        const r=await db.from('member_tasks').select('*').order('created_at');
+        memberExtraTasks={};
+        (r.data||[]).forEach(t=>{if(!memberExtraTasks[t.member_id])memberExtraTasks[t.member_id]=[];memberExtraTasks[t.member_id].push(t);});
+        break;
+      }
+      case 'member_statuses': {
+        const r=await db.from('member_statuses').select('*');
+        memberStatuses={};
+        (r.data||[]).forEach(x=>{if(x.date==='wfh')memberStatuses[x.member_id]=x;});
+        break;
+      }
+      case 'upload_member_schedules': {
+        const r=await db.from('upload_member_schedules').select('*');
+        memberSchedulesData={};
+        (r.data||[]).forEach(x=>{if(!memberSchedulesData[x.upload_id])memberSchedulesData[x.upload_id]=[];memberSchedulesData[x.upload_id].push(x);});
+        break;
+      }
+      case 'shoots': { const r=await db.from('shoots').select('*'); shootData=r.data||[]; break; }
+      case 'shoot_dates': { const r=await db.from('shoot_dates').select('*').order('shoot_date'); shootDatesData=r.data||[]; break; }
+      case 'ads': { const r=await db.from('ads').select('*').order('created_at',{ascending:false}); adData=r.data||[]; break; }
+      case 'ad_kpi': { const r=await db.from('ad_kpi').select('*'); adKpiData=r.data||[]; break; }
+      case 'meetings': { const r=await db.from('meetings').select('*').order('created_at'); meetingData=r.data||[]; break; }
+      case 'meeting_items': { const r=await db.from('meeting_items').select('*').order('sort_order'); meetingItemData=r.data||[]; migrateOldMeetingSections(); break; }
+      case 'channel_snapshots': { const r=await db.from('channel_snapshots').select('*').order('snapshot_date'); channelSnapshots=r.data||[]; break; }
+      case 'video_snapshots': { const r=await db.from('video_snapshots').select('*').order('snapshot_date'); videoSnapshots=r.data||[]; break; }
+      default: return;
+    }
+    renderAll();
+  }catch(e){
+    console.error('Realtime refresh failed:',table,e);
+    showToast('실시간 업데이트 실패: '+e.message);
+  }
+}
+
+function flushRealtime(){
+  if(!realtimePending.size) return;
+  const modalOpen=[...document.querySelectorAll('.modal-overlay')].some(m=>m.style.display==='flex');
+  if(modalOpen){
+    realtimeWaitingForModal=true;
+    return;
+  }
+  realtimeWaitingForModal=false;
+  const tables=[...realtimePending];
+  realtimePending.clear();
+  // 같은 시간대에 여러 테이블이 바뀌어도 요청을 한 번씩만 실행
+  Promise.all(tables.map(refreshRealtimeTable));
+}
+
+function queueRealtimeRefresh(table){
+  if(!table) return;
+  realtimePending.add(table);
+  clearTimeout(realtimeTimer);
+  realtimeTimer=setTimeout(flushRealtime,500);
+}
+
 function subscribeRealtime(){
-  db.channel('db').on('postgres_changes',{event:'*',schema:'public'},()=>{
-    // 모달이 열려있으면 입력 방해 안 하도록 스킵
-    const modalOpen=[...document.querySelectorAll('.modal-overlay')].some(m=>m.style.display==='flex');
-    if(modalOpen) return;
-    loadData();
-  }).subscribe();
+  db.channel('db')
+    .on('postgres_changes',{event:'*',schema:'public',table:'events'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'uploads'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'notices'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'resources'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'resource_memos'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'handovers'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'member_tasks'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'member_statuses'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'upload_member_schedules'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'shoots'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'shoot_dates'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'ads'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'ad_kpi'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'meetings'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_items'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'channel_snapshots'},p=>queueRealtimeRefresh(p.table))
+    .on('postgres_changes',{event:'*',schema:'public',table:'video_snapshots'},p=>queueRealtimeRefresh(p.table))
+    .subscribe();
+
+  // 모달을 닫은 직후 대기 중인 변경사항이 있으면 반영
+  setInterval(()=>{
+    if(realtimeWaitingForModal && ![...document.querySelectorAll('.modal-overlay')].some(m=>m.style.display==='flex')){
+      flushRealtime();
+    }
+  },1000);
 }
 
 // ── 구글 캘린더 (홈 내일 일정 백그라운드 동기화 전용) ──
