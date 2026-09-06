@@ -3402,121 +3402,150 @@ function renderAdminStats(){
 
   const ups=adminFilterUploads();
   const MC=name=>MEMBERS[Object.keys(MEMBERS).find(k=>MEMBERS[k].label===name)]?.color||'#888';
+  const DAY=86400000;
+  const startOfDay=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+  const today=startOfDay(now);
+  const weekStart=new Date(today); weekStart.setDate(today.getDate()-((today.getDay()+6)%7));
+  const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+  const dateVal=x=>x?new Date(x+'T00:00:00'):null;
+  const clampDays=(a,b)=>Math.max(1,Math.round((startOfDay(b)-startOfDay(a))/DAY)+1);
 
-  // 1) 팀원별 업무량 = 편집/업로드 담당 수 + 구성안 담당 수 (과업 합산)
-  const workload={};
-  ADMIN_MEMBERS.forEach(m=>workload[m]={edit:0,plan:0});
-  ups.forEach(u=>{
-    (u.member||'').split(',').map(s=>s.trim()).forEach(m=>{ if(workload[m]) workload[m].edit++; });
-    if(u.plan_member&&workload[u.plan_member]) workload[u.plan_member].plan++;
-  });
-  const workloadArr=ADMIN_MEMBERS.map(m=>({name:m,...workload[m],total:workload[m].edit+workload[m].plan}))
-    .sort((a,b)=>b.total-a.total);
-  const maxWork=Math.max(1,...workloadArr.map(w=>w.total));
+  // 기존 데이터에서 담당자별 '업무 수'가 아니라 '업무가 차지하는 기간'까지 반영한 가중 업무량을 계산합니다.
+  const stats={};
+  ADMIN_MEMBERS.forEach(m=>stats[m]={edit:0,plan:0,active:0,upcoming:0,overdue:0,days:0,weekDays:0,todayTasks:0,short:0,long:0,titles:[]});
 
-  // 2) 롱폼/쇼츠 분담 (편집 담당 기준)
-  const ls={};
-  ADMIN_MEMBERS.forEach(m=>ls[m]={long:0,short:0});
   ups.forEach(u=>{
-    (u.member||'').split(',').map(s=>s.trim()).forEach(m=>{
-      if(!ls[m]) return;
-      if(u.video_type==='short') ls[m].short++; else ls[m].long++;
+    const members=(u.member||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const uploadDate=dateVal(u.date);
+    const editStart=dateVal(u.edit_start_date)||uploadDate;
+    const editEnd=dateVal(u.edit_end_date)||uploadDate;
+    members.forEach(m=>{
+      const st=stats[m]; if(!st) return;
+      st.edit++;
+      if(u.video_type==='short') st.short++; else st.long++;
+      if(u.title) st.titles.push({title:u.title,start:editStart,end:editEnd});
+      if(editStart&&editEnd){
+        const a=editStart<today?today:editStart;
+        if(editEnd>=today) st.days+=clampDays(editStart,editEnd);
+        if(editStart<=today&&editEnd>=today){st.active++;st.todayTasks++;}
+        else if(editStart>today){st.upcoming++;}
+        if(editEnd<today) st.overdue++;
+        const wa=editStart>weekStart?editStart:weekStart;
+        const wb=editEnd<weekEnd?editEnd:weekEnd;
+        if(wa<=wb) st.weekDays+=clampDays(wa,wb);
+      }
     });
+    if(u.plan_member&&stats[u.plan_member]) stats[u.plan_member].plan++;
   });
 
-  // 3) 장비불출 기여도 (self_shoot인 촬영에 참여한 멤버)
-  const selfContrib={};
-  ADMIN_MEMBERS.forEach(m=>selfContrib[m]=0);
-  shootData.filter(s=>s.self_shoot||s.shoot_type==='self').forEach(s=>{
-    (s.members||'').split(',').map(x=>x.trim()).forEach(m=>{ if(selfContrib[m]!==undefined) selfContrib[m]++; });
+  // 보조 업무(member_tasks)는 기존 업무 데이터에 추가하되, 기간이 없는 업무는 1일 업무로 계산합니다.
+  const memberIdToName={};
+  (memberData||[]).forEach(m=>{ if(m.id&&m.name) memberIdToName[m.id]=m.name; if(m.id&&m.label) memberIdToName[m.id]=m.label; });
+  (memberTaskData||[]).forEach(t=>{
+    const m=memberIdToName[t.member_id] || t.member || t.member_name;
+    if(stats[m]){ stats[m].plan++; stats[m].days+=1; stats[m].weekDays+=1; }
   });
-  const selfArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:selfContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
 
-  // 4) 광고 담당 현황
-  const adContrib={};
-  ADMIN_MEMBERS.forEach(m=>adContrib[m]=0);
-  adData.forEach(a=>{ if(adContrib[a.member]!==undefined) adContrib[a.member]++; });
-  const adArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:adContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  // 겹치는 편집 업무를 계산합니다. 같은 날짜에 2개 이상 진행 중이면 과부하 신호로 봅니다.
+  const overlap={};
+  ADMIN_MEMBERS.forEach(m=>overlap[m]=0);
+  ADMIN_MEMBERS.forEach(m=>{
+    const ranges=stats[m].titles.filter(x=>x.start&&x.end).map(x=>({s:startOfDay(x.start),e:startOfDay(x.end)}));
+    for(let d=new Date(weekStart);d<=weekEnd;d.setDate(d.getDate()+1)){
+      const n=ranges.filter(r=>r.s<=d&&r.e>=d).length;
+      if(n>=2) overlap[m]+=n-1;
+    }
+  });
+
+  const scoreOf=m=>{
+    const x=stats[m];
+    // 편집 1건=3점, 구성안/기타 1건=1점, 편집기간 1주 이상이면 추가 가중치.
+    return x.edit*3+x.plan+Math.max(0,x.weekDays-5)*0.6+overlap[m]*1.5;
+  };
+  const scores=ADMIN_MEMBERS.map(name=>({name,score:scoreOf(name),...stats[name],overlap:overlap[name]}));
+  const maxScore=Math.max(1,...scores.map(x=>x.score));
+  const rankScore=[...scores].sort((a,b)=>b.score-a.score);
+  const status=x=>x.score>=maxScore*.8?'high':x.score>=maxScore*.55?'mid':'low';
+  const statusText={high:'과부하 주의',mid:'적정',low:'여유'};
+  const statusIcon={high:'🔴',mid:'🟡',low:'🟢'};
 
   let html='';
 
-  // 1. 업무량
+  // 0. 한눈에 보는 현재 팀 상태
+  const high=rankScore.filter(x=>status(x)==='high');
+  const activeTotal=rankScore.reduce((a,x)=>a+x.active,0);
+  const overdueTotal=rankScore.reduce((a,x)=>a+x.overdue,0);
+  html+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+    <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
+      <div style="font-size:10px;color:var(--color-text-secondary)">현재 편집 중</div><div style="font-size:24px;font-weight:700;margin-top:4px">${activeTotal}<span style="font-size:11px;font-weight:400;color:#888">건</span></div>
+    </div>
+    <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
+      <div style="font-size:10px;color:var(--color-text-secondary)">이번 주 업무일</div><div style="font-size:24px;font-weight:700;margin-top:4px">${rankScore.reduce((a,x)=>a+x.weekDays,0)}<span style="font-size:11px;font-weight:400;color:#888">일</span></div>
+    </div>
+    <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
+      <div style="font-size:10px;color:var(--color-text-secondary)">겹치는 업무</div><div style="font-size:24px;font-weight:700;margin-top:4px">${rankScore.reduce((a,x)=>a+x.overlap,0)}<span style="font-size:11px;font-weight:400;color:#888">건</span></div>
+    </div>
+    <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px">
+      <div style="font-size:10px;color:var(--color-text-secondary)">과부하 주의</div><div style="font-size:24px;font-weight:700;margin-top:4px">${high.length}<span style="font-size:11px;font-weight:400;color:#888">명</span></div>
+    </div>
+  </div>`;
+
+  // 1. 가중 업무량
   html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;margin-bottom:14px">
     <div style="font-size:14px;font-weight:600;margin-bottom:4px">📊 팀원별 업무량</div>
-    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">편집/업로드 담당 + 구성안 담당 합산 (과업 수)</div>
-    <div style="display:flex;flex-direction:column;gap:10px">`;
-  workloadArr.forEach(w=>{
-    const c=MC(w.name);
-    const pct=Math.round(w.total/maxWork*100);
-    html+=`<div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:12px;width:48px;font-weight:500">${w.name}</span>
-      <div style="flex:1;height:24px;background:var(--color-background-secondary);border-radius:6px;overflow:hidden;position:relative">
-        <div style="width:${pct}%;height:100%;background:${c};border-radius:6px;min-width:${w.total?'24px':'0'};transition:width .3s"></div>
-      </div>
-      <span style="font-size:12px;font-weight:600;width:70px;text-align:right">${w.total}건 <span style="font-size:9px;color:#aaa;font-weight:400">✂${w.edit}·📝${w.plan}</span></span>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">편집 건수 + 편집 기간 + 업무 겹침을 반영한 상대 업무량</div>
+    <div style="display:flex;flex-direction:column;gap:12px">`;
+  rankScore.forEach(x=>{
+    const st=status(x), pct=Math.round(x.score/maxScore*100), c=MC(x.name);
+    html+=`<div style="display:grid;grid-template-columns:52px 1fr 82px;gap:10px;align-items:center">
+      <span style="font-size:12px;font-weight:600">${x.name}</span>
+      <div><div style="height:22px;background:var(--color-background-secondary);border-radius:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c};border-radius:6px;min-width:${x.score?'28px':'0'}"></div></div>
+      <div style="font-size:9px;color:#999;margin-top:3px">편집 ${x.edit} · 구성안 ${x.plan} · 현재 ${x.active} · 겹침 ${x.overlap}</div></div>
+      <div style="text-align:right;font-size:11px"><b>${statusIcon[st]} ${statusText[st]}</b><br><span style="color:#999">${x.score.toFixed(1)}pt</span></div>
     </div>`;
   });
   html+=`</div></div>`;
 
-  // 2+3 나란히
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">`;
+  // 2. 이번 주 리스크 / 업무 집중 구간
+  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;margin-bottom:14px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px">⚠️ 이번 주 체크할 사람</div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px">현재 편집 중이거나 일정이 겹치는 팀원부터 확인하세요.</div>`;
+  const risk=rankScore.filter(x=>x.active||x.overlap||x.overdue).sort((a,b)=>(b.active+b.overlap+b.overdue)-(a.active+a.overlap+a.overdue));
+  if(risk.length){
+    html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    risk.slice(0,6).forEach(x=>{
+      const reasons=[]; if(x.active) reasons.push(`진행 ${x.active}건`); if(x.overlap) reasons.push(`겹침 ${x.overlap}건`); if(x.overdue) reasons.push(`마감 경과 ${x.overdue}건`);
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:var(--color-background-secondary);border-radius:8px"><span style="font-size:12px;font-weight:600">${statusIcon[status(x)]} ${x.name}</span><span style="font-size:10px;color:var(--color-text-secondary)">${reasons.join(' · ')}</span></div>`;
+    });
+    html+=`</div>`;
+  } else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">현재 특별히 겹치는 업무가 없어요.</div>`;
+  html+=`</div>`;
 
-  // 2. 롱폼/쇼츠
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
-    <div style="font-size:14px;font-weight:600;margin-bottom:14px">🎬 롱폼 / 📱 쇼츠 분담</div>
-    <div style="display:flex;flex-direction:column;gap:9px">`;
+  // 3. 기존 롱폼/쇼츠
+  const ls={}; ADMIN_MEMBERS.forEach(m=>ls[m]={long:stats[m].long,short:stats[m].short});
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:14px">🎬 롱폼 / 📱 쇼츠 분담</div><div style="display:flex;flex-direction:column;gap:9px">`;
   ADMIN_MEMBERS.map(m=>({name:m,...ls[m],total:ls[m].long+ls[m].short})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).forEach(x=>{
     const lp=x.total?Math.round(x.long/x.total*100):0;
-    html+=`<div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:12px;width:48px;font-weight:500">${x.name}</span>
-      <div style="flex:1;height:18px;display:flex;border-radius:5px;overflow:hidden;background:var(--color-background-secondary)">
-        ${x.long?`<div style="width:${lp}%;background:#A3B565;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">${x.long}</div>`:''}
-        ${x.short?`<div style="width:${100-lp}%;background:#E89B9B;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">${x.short}</div>`:''}
-      </div>
-    </div>`;
+    html+=`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;width:48px;font-weight:500">${x.name}</span><div style="flex:1;height:18px;display:flex;border-radius:5px;overflow:hidden;background:var(--color-background-secondary)">${x.long?`<div style="width:${lp}%;background:#A3B565;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">${x.long}</div>`:''}${x.short?`<div style="width:${100-lp}%;background:#E89B9B;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">${x.short}</div>`:''}</div></div>`;
   });
-  html+=`<div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:var(--color-text-secondary)"><span>🟩 롱폼</span><span>🟥 쇼츠</span></div>`;
+  html+=`<div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:var(--color-text-secondary)"><span>🟩 롱폼</span><span>🟥 쇼츠</span></div></div></div>`;
+
+  // 4. 장비불출
+  const selfContrib={}; ADMIN_MEMBERS.forEach(m=>selfContrib[m]=0);
+  shootData.filter(s=>s.self_shoot||s.shoot_type==='self').forEach(s=>(s.members||'').split(',').map(x=>x.trim()).forEach(m=>{if(selfContrib[m]!==undefined)selfContrib[m]++;}));
+  const selfArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:selfContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:14px">🎒 장비불출 기여도</div>`;
+  if(selfArr.length){html+=`<div style="display:flex;flex-direction:column;gap:9px">`;selfArr.forEach((x,i)=>html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:${i===0?'#EAF3DE':'var(--color-background-secondary)'};border-radius:7px"><span style="font-size:12px;font-weight:500">${['🥇','🥈','🥉'][i]||'　'} ${x.name}</span><span style="font-size:12px;font-weight:600">${x.cnt}회</span></div>`);html+=`</div>`;}else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">장비불출 기록이 없어요</div>`;
   html+=`</div></div>`;
 
-  // 3. 장비불출
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
-    <div style="font-size:14px;font-weight:600;margin-bottom:14px">🎒 장비불출 기여도</div>`;
-  if(selfArr.length){
-    const medals=['🥇','🥈','🥉'];
-    html+=`<div style="display:flex;flex-direction:column;gap:9px">`;
-    selfArr.forEach((x,i)=>{
-      const top=i<3;
-      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:${i===0?'#EAF3DE':'var(--color-background-secondary)'};border-radius:7px">
-        <span style="font-size:12px;font-weight:500">${medals[i]||'　'} ${x.name}</span>
-        <span style="font-size:12px;font-weight:600;${i===0?'color:#3D4D1A':''}">${x.cnt}회</span>
-      </div>`;
-    });
-    html+=`</div>`;
-  } else {
-    html+=`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px 0">장비불출 기록이 없어요</div>`;
-  }
+  // 5. 광고
+  const adContrib={}; ADMIN_MEMBERS.forEach(m=>adContrib[m]=0); adData.forEach(a=>{if(adContrib[a.member]!==undefined)adContrib[a.member]++;});
+  const adArr=ADMIN_MEMBERS.map(m=>({name:m,cnt:adContrib[m]})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:4px">📢 광고 담당 현황</div><div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">진행 브랜드 수</div>`;
+  if(adArr.length){html+=`<div style="display:flex;gap:8px;flex-wrap:wrap">`;adArr.forEach(x=>html+=`<div style="flex:1;min-width:80px;text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:8px"><div style="font-size:22px;font-weight:700;color:${MC(x.name)}">${x.cnt}</div><div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.name}</div></div>`);html+=`</div>`;}else html+=`<div style="font-size:12px;color:var(--color-text-secondary)">광고 데이터가 없어요</div>`;
   html+=`</div>`;
-  html+=`</div>`; // grid 끝
-
-  // 4. 광고
-  html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
-    <div style="font-size:14px;font-weight:600;margin-bottom:4px">📢 광고 담당 현황</div>
-    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">진행 브랜드 수</div>`;
-  if(adArr.length){
-    html+=`<div style="display:flex;gap:8px;flex-wrap:wrap">`;
-    adArr.forEach(x=>{
-      const c=MC(x.name);
-      html+=`<div style="flex:1;min-width:80px;text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:8px">
-        <div style="font-size:22px;font-weight:700;color:${c}">${x.cnt}</div>
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.name}</div>
-      </div>`;
-    });
-    html+=`</div>`;
-  } else {
-    html+=`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px 0">광고 데이터가 없어요</div>`;
-  }
-  html+=`</div>`;
-
   el.innerHTML=html;
 }
 
