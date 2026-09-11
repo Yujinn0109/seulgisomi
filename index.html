@@ -352,6 +352,9 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <div id="timeline-grid"></div>
     </div>
   </div>
+
+  <!-- 담당자별 현재 업무판 -->
+  <div id="member-workboard" style="margin-top:20px"></div>
 </div>
 
 <!-- SHOOT -->
@@ -2395,6 +2398,7 @@ function renderUpload(){
 
   rowsEl.innerHTML=html;
   renderTimeline();
+  renderMemberWorkboard();
 }
 
 // 주차 행 하나 생성 (날짜축 | 소미 | 슬기)
@@ -2418,7 +2422,75 @@ function toggleUploadPast(ch){
   renderUpload();
 }
 
+// 담당자별 현재 업무판 (업로드 페이지 하단)
+function renderMemberWorkboard(){
+  const el=document.getElementById('member-workboard');
+  if(!el) return;
+  const parseDate=s=>s?new Date(s+'T00:00:00'):null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const WB_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','유키'];
 
+  const wb={};
+  WB_MEMBERS.forEach(m=>wb[m]={now:[],next:[]});
+  uploadData.forEach(u=>{
+    if(u.status==='done') return;
+    const members=(u.member||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const schedules=memberSchedulesData[u.id]||[];
+    members.forEach(m=>{
+      if(!wb[m]) return;
+      const ps=schedules.find(x=>x.member_name===m);
+      const es=parseDate(ps?.edit_start), ee=parseDate(ps?.edit_end);
+      const isNow=es&&ee&&es<=today&&ee>=today;
+      const item={title:u.title,status:u.status,date:u.date};
+      if(isNow) wb[m].now.push(item); else wb[m].next.push(item);
+    });
+  });
+  WB_MEMBERS.forEach(m=>{
+    wb[m].next.sort((a,b)=>new Date(a.date||'2099')-new Date(b.date||'2099'));
+    wb[m].now.sort((a,b)=>new Date(a.date||'2099')-new Date(b.date||'2099'));
+  });
+
+  const statusTag=st=>{
+    const map={plan:{t:'기획',bg:'#EEEDFE',c:'#3C3489'},edit:{t:'편집중',bg:'#FDECEC',c:'#D14343'},review:{t:'검수중',bg:'#E6F1FB',c:'#0C447C'}};
+    const s=map[st]; return s?`<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;background:${s.bg};color:${s.c}">${s.t}</span>`:'';
+  };
+  const shortDate=d=>d?d.slice(5).replace('-','/'):'';
+  const overloaded=WB_MEMBERS.filter(m=>wb[m].now.length>=2);
+
+  let html=`<div style="background:#fff;border:1px solid var(--color-border-tertiary);border-radius:14px;padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:15px;font-weight:700">👥 담당자별 현재 업무</div>
+      <div style="font-size:11px;color:var(--color-text-secondary)">${today.getMonth()+1}/${today.getDate()} 기준</div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">🔴 지금 편집 중 · 🟡 다음 예정 (완료 항목 제외)</div>
+    <div style="display:grid;grid-template-columns:64px 1fr 1fr 74px 76px;gap:12px;padding:0 10px 8px;font-size:10px;color:var(--color-text-secondary);font-weight:600;border-bottom:1.5px solid var(--color-border-tertiary)">
+      <div>담당</div><div>🔴 지금 작업</div><div>🟡 다음 작업</div><div>📅 업로드</div><div style="text-align:right">업무량</div>
+    </div>`;
+
+  WB_MEMBERS.forEach(m=>{
+    const color=MEMBER_COLOR_MAP[m]||'#888';
+    const nowItem=wb[m].now[0];
+    const nextItem=wb[m].next[0];
+    const totalNow=wb[m].now.length, totalNext=wb[m].next.length;
+    const isOver=totalNow>=2;
+    const empty=totalNow===0&&totalNext===0;
+    const dateStr=[nowItem?shortDate(nowItem.date):null,nextItem?shortDate(nextItem.date):null].filter(Boolean).join('<br>')||'—';
+
+    html+=`<div style="display:grid;grid-template-columns:64px 1fr 1fr 74px 76px;gap:12px;align-items:center;padding:11px 10px;border-bottom:0.5px solid #eee;${isOver?'background:#FFF9F0':''}">
+      <div><span style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${m.length>2?m.slice(0,2):m}</span></div>
+      <div>${nowItem?`${statusTag(nowItem.status)} <span style="font-size:12px">${nowItem.title}</span>${isOver?' <span style="font-size:10px">⚠️</span>':''}${totalNow>1?` <span style="font-size:9px;color:#D14343">+${totalNow-1}</span>`:''}`:(empty?`<span style="font-size:12px;color:#ccc">배정된 업무 없음</span>`:`<span style="font-size:12px;color:#ccc">—</span>`)}</div>
+      <div>${nextItem?`${statusTag(nextItem.status)} <span style="font-size:12px;color:#666">${nextItem.title}</span>${totalNext>1?` <span style="font-size:9px;color:#999">+${totalNext-1}</span>`:''}`:`<span style="font-size:12px;color:#ccc">—</span>`}</div>
+      <div style="font-size:11px;color:var(--color-text-secondary)">${dateStr}</div>
+      <div style="text-align:right;font-size:11px">${empty?`<span style="color:#bbb">총 0</span>`:`<b style="color:${totalNow?'#D14343':'#333'}">진행 ${totalNow}</b><br><span style="color:#999">예정 ${totalNext} · 총 ${totalNow+totalNext}</span>`}</div>
+    </div>`;
+  });
+
+  if(overloaded.length){
+    html+=`<div style="margin-top:14px;padding:10px 12px;background:#FFF4E5;border-radius:8px;font-size:11px;color:#9A6B1E">⚠️ 이번 주 작업 몰림: <b>${overloaded.join(', ')}</b> (진행 2건 이상)</div>`;
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
 
 function renderTimeline(){
   const COL=24;
