@@ -338,23 +338,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <div id="upload-week-rows"></div>
   </div>
 
-  <!-- 타임라인 캘린더 -->
-  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="display:flex;align-items:center;gap:8px">
-        <i class="ti ti-calendar-stats" style="font-size:16px;color:#C6DA81"></i>
-        <span style="font-size:13px;font-weight:500">편집 타임라인</span>
-        <span id="timeline-range-label" style="font-size:11px;color:var(--color-text-secondary)"></span>
-      </div>
-      <span style="font-size:11px;color:var(--color-text-secondary)">막대 = 담당자별 편집 기간 · ▲ = 업로드일</span>
-    </div>
-    <div id="timeline-scroll" style="padding:12px 16px;overflow-x:auto">
-      <div id="timeline-grid"></div>
-    </div>
-  </div>
-
   <!-- 담당자별 현재 업무판 -->
-  <div id="member-workboard" style="margin-top:20px"></div>
+  <div id="member-workboard"></div>
 </div>
 
 <!-- SHOOT -->
@@ -2369,7 +2354,7 @@ function renderUpload(){
   const allWeeks=[...new Set([...Object.keys(somiWeeks),...Object.keys(seulgiWeeks)])].sort();
 
   const rowsEl=document.getElementById('upload-week-rows');
-  if(!rowsEl){ renderTimeline(); return; }
+  if(!rowsEl){ return; }
 
   let html='';
 
@@ -2397,7 +2382,6 @@ function renderUpload(){
   allWeeks.forEach(wk=>{ html+=weekRow(wk, somiWeeks[wk]||[], seulgiWeeks[wk]||[], weekLabel, makeCard, false); });
 
   rowsEl.innerHTML=html;
-  renderTimeline();
   renderMemberWorkboard();
 }
 
@@ -2431,8 +2415,10 @@ function renderMemberWorkboard(){
   const WB_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','유키'];
 
   const wb={};
-  WB_MEMBERS.forEach(m=>wb[m]={now:[],next:[]});
+  WB_MEMBERS.forEach(m=>wb[m]={now:[],next:[],plan:0});
   uploadData.forEach(u=>{
+    // 구성안 담당 수 (완료 무관, 담당 지정된 건 모두)
+    if(u.plan_member&&wb[u.plan_member]) wb[u.plan_member].plan++;
     if(u.status==='done') return;
     const members=(u.member||'').split(',').map(x=>x.trim()).filter(Boolean);
     const schedules=memberSchedulesData[u.id]||[];
@@ -2462,9 +2448,9 @@ function renderMemberWorkboard(){
       <div style="font-size:15px;font-weight:700">👥 담당자별 현재 업무</div>
       <div style="font-size:11px;color:var(--color-text-secondary)">${today.getMonth()+1}/${today.getDate()} 기준</div>
     </div>
-    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">🔴 지금 편집 중 · 🟡 다음 예정 (완료 항목 제외)</div>
-    <div style="display:grid;grid-template-columns:64px 1fr 1fr 74px 76px;gap:12px;padding:0 10px 8px;font-size:10px;color:var(--color-text-secondary);font-weight:600;border-bottom:1.5px solid var(--color-border-tertiary)">
-      <div>담당</div><div>🔴 지금 작업</div><div>🟡 다음 작업</div><div>📅 업로드</div><div style="text-align:right">업무량</div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">🔴 지금 편집 중 · 🟡 다음 예정 · 📝 구성안 담당 (완료 항목 제외, 구성안은 전체)</div>
+    <div style="display:grid;grid-template-columns:64px 1fr 1fr 60px 74px 76px;gap:10px;padding:0 10px 8px;font-size:10px;color:var(--color-text-secondary);font-weight:600;border-bottom:1.5px solid var(--color-border-tertiary)">
+      <div>담당</div><div>🔴 지금 작업</div><div>🟡 다음 작업</div><div style="text-align:center">📝 구성안</div><div>📅 업로드</div><div style="text-align:right">업무량</div>
     </div>`;
 
   WB_MEMBERS.forEach(m=>{
@@ -2472,16 +2458,18 @@ function renderMemberWorkboard(){
     const nowItem=wb[m].now[0];
     const nextItem=wb[m].next[0];
     const totalNow=wb[m].now.length, totalNext=wb[m].next.length;
+    const planCnt=wb[m].plan;
     const isOver=totalNow>=2;
-    const empty=totalNow===0&&totalNext===0;
+    const empty=totalNow===0&&totalNext===0&&planCnt===0;
     const dateStr=[nowItem?shortDate(nowItem.date):null,nextItem?shortDate(nextItem.date):null].filter(Boolean).join('<br>')||'—';
 
-    html+=`<div style="display:grid;grid-template-columns:64px 1fr 1fr 74px 76px;gap:12px;align-items:center;padding:11px 10px;border-bottom:0.5px solid #eee;${isOver?'background:#FFF9F0':''}">
+    html+=`<div style="display:grid;grid-template-columns:64px 1fr 1fr 60px 74px 76px;gap:10px;align-items:center;padding:11px 10px;border-bottom:0.5px solid #eee;${isOver?'background:#FFF9F0':''}">
       <div><span style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${m.length>2?m.slice(0,2):m}</span></div>
       <div>${nowItem?`${statusTag(nowItem.status)} <span style="font-size:12px">${nowItem.title}</span>${isOver?' <span style="font-size:10px">⚠️</span>':''}${totalNow>1?` <span style="font-size:9px;color:#D14343">+${totalNow-1}</span>`:''}`:(empty?`<span style="font-size:12px;color:#ccc">배정된 업무 없음</span>`:`<span style="font-size:12px;color:#ccc">—</span>`)}</div>
       <div>${nextItem?`${statusTag(nextItem.status)} <span style="font-size:12px;color:#666">${nextItem.title}</span>${totalNext>1?` <span style="font-size:9px;color:#999">+${totalNext-1}</span>`:''}`:`<span style="font-size:12px;color:#ccc">—</span>`}</div>
+      <div style="text-align:center">${planCnt?`<span style="font-size:12px;font-weight:600;color:#7A5AA8">${planCnt}</span>`:`<span style="font-size:12px;color:#ccc">0</span>`}</div>
       <div style="font-size:11px;color:var(--color-text-secondary)">${dateStr}</div>
-      <div style="text-align:right;font-size:11px">${empty?`<span style="color:#bbb">총 0</span>`:`<b style="color:${totalNow?'#D14343':'#333'}">진행 ${totalNow}</b><br><span style="color:#999">예정 ${totalNext} · 총 ${totalNow+totalNext}</span>`}</div>
+      <div style="text-align:right;font-size:11px">${empty?`<span style="color:#bbb">총 0</span>`:`<b style="color:${totalNow?'#D14343':'#333'}">진행 ${totalNow}</b><br><span style="color:#999">예정 ${totalNext}${planCnt?` · 📝${planCnt}`:''}</span>`}</div>
     </div>`;
   });
 
@@ -2492,193 +2480,6 @@ function renderMemberWorkboard(){
   el.innerHTML=html;
 }
 
-function renderTimeline(){
-  const COL=24;
-  const today=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  const TIMELINE_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
-  const memberColors={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
-  const grid=document.getElementById('timeline-grid');
-  if(!grid) return;
-
-  // 전체 업로드 데이터에서 날짜 범위 자동 계산
-  const allDates=[];
-  uploadData.forEach(u=>{
-    const memberScheds=memberSchedulesData[u.id]||[];
-    if(memberScheds.length){
-      memberScheds.forEach(s=>{
-        if(s.edit_start) allDates.push(new Date(s.edit_start));
-        if(s.edit_end)   allDates.push(new Date(s.edit_end));
-      });
-    }
-    if(u.edit_start) allDates.push(new Date(u.edit_start));
-    if(u.edit_end)   allDates.push(new Date(u.edit_end));
-    if(u.date)       allDates.push(new Date(u.date));
-  });
-
-  if(!allDates.length){
-    grid.innerHTML=`<div style="padding:16px;text-align:center;font-size:12px;color:var(--color-text-secondary)">등록된 일정이 없어요</div>`;
-    return;
-  }
-
-  // 범위: 가장 이른 날 ~ 가장 늦은 날 (월 단위로 확장)
-  const minDate=new Date(Math.min(...allDates));
-  const maxDate=new Date(Math.max(...allDates));
-  // 시작: 해당 월의 1일, 끝: 해당 월의 마지막 날
-  const startDate=new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  const endDate=new Date(maxDate.getFullYear(), maxDate.getMonth()+1, 0);
-
-  // 총 날짜 수
-  const totalDays=Math.round((endDate-startDate)/(1000*60*60*24))+1;
-  const totalWidth=120+totalDays*COL;
-
-  // 범위 라벨 업데이트
-  const rangeLabel=document.getElementById('timeline-range-label');
-  if(rangeLabel){
-    const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    rangeLabel.textContent=`${startDate.getFullYear()}년 ${months[startDate.getMonth()]} ~ ${endDate.getFullYear()}년 ${months[endDate.getMonth()]}`;
-  }
-
-  // 날짜 → 픽셀 오프셋 계산 함수
-  const dateToLeft=dateStr=>{
-    const d=new Date(dateStr);
-    const diff=Math.round((d-startDate)/(1000*60*60*24));
-    return diff*COL;
-  };
-
-  let html=`<div style="min-width:${totalWidth}px">`;
-
-  // ── 헤더: 월 라벨 + 날짜 숫자 ──
-  // 월 라벨 행
-  html+=`<div style="display:flex;margin-bottom:1px">`;
-  html+=`<div style="width:120px;flex-shrink:0"></div>`;
-  let d=new Date(startDate);
-  while(d<=endDate){
-    const yr=d.getFullYear(), mo=d.getMonth();
-    const daysInMonth=new Date(yr,mo+1,0).getDate();
-    // 이달에서 실제 렌더되는 날 수 계산
-    const monthStart=new Date(yr,mo,1);
-    const monthEnd=new Date(yr,mo+1,0);
-    const renderStart=new Date(Math.max(monthStart,startDate));
-    const renderEnd=new Date(Math.min(monthEnd,endDate));
-    const renderDays=Math.round((renderEnd-renderStart)/(1000*60*60*24))+1;
-    const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    html+=`<div style="width:${renderDays*COL}px;flex-shrink:0;font-size:10px;font-weight:600;color:var(--color-text-secondary);border-left:1px solid var(--color-border-tertiary);padding-left:4px;background:var(--color-background-secondary)">${yr}년 ${months[mo]}</div>`;
-    d=new Date(yr,mo+1,1);
-  }
-  html+=`</div>`;
-
-  // 날짜 숫자 행
-  html+=`<div style="display:flex;margin-bottom:4px">`;
-  html+=`<div style="width:120px;flex-shrink:0"></div>`;
-  for(let i=0;i<totalDays;i++){
-    const cur=new Date(startDate.getTime()+i*86400000);
-    const day=cur.getDate();
-    const dow=cur.getDay();
-    const isToday=cur.toDateString()===today.toDateString();
-    const isSun=dow===0, isSat=dow===6;
-    html+=`<div style="width:${COL}px;text-align:center;font-size:9px;font-weight:${isToday?700:400};color:${isToday?'#C6DA81':isSun?'#E24B4A':isSat?'#378ADD':'var(--color-text-secondary)'};flex-shrink:0;${isToday?'background:#C6DA8118;border-radius:2px':''}">${day===1||i===0?day:day}</div>`;
-  }
-  html+=`</div>`;
-
-  // ── 담당자별 행 ──
-  TIMELINE_MEMBERS.forEach(name=>{
-    const color=memberColors[name]||'#888';
-    const tasks=uploadData.filter(u=>{
-      const members=(u.member||'').split(',').map(s=>s.trim());
-      return members.includes(name);
-    });
-
-    html+=`<div style="display:flex;align-items:center;margin-bottom:4px">`;
-    html+=`<div style="width:120px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding-right:8px">
-      <div style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0">${name.slice(0,1)}</div>
-      <span style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
-    </div>`;
-
-    html+=`<div style="position:relative;height:22px;display:flex;flex:1">`;
-    // 셀 배경
-    for(let i=0;i<totalDays;i++){
-      const cur=new Date(startDate.getTime()+i*86400000);
-      const dow=cur.getDay();
-      const isWeekend=dow===0||dow===6;
-      const isToday=cur.toDateString()===today.toDateString();
-      // 월 경계선
-      const isMonthStart=cur.getDate()===1&&i>0;
-      html+=`<div style="width:${COL}px;height:22px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);${isMonthStart?'border-left:1px solid var(--color-border-secondary);':''}background:${isToday?'#C6DA8110':isWeekend?'rgba(180,180,180,0.2)':'transparent'}"></div>`;
-    }
-
-    // 오늘 세로선
-    if(today>=startDate&&today<=endDate){
-      const todayLeft=dateToLeft(pad(today.getFullYear())+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate()))+COL/2;
-      html+=`<div style="position:absolute;left:${todayLeft}px;top:0;bottom:0;width:1.5px;background:#C6DA8155;pointer-events:none;z-index:3"></div>`;
-    }
-
-    // 바 렌더
-    tasks.forEach(u=>{
-      const barColor=u.channel==='seulgi'?'#B45309':'#DB2777';
-      const memberScheds=memberSchedulesData[u.id]||[];
-      const personalSched=memberScheds.find(s=>s.member_name===name);
-      const startStr=personalSched?.edit_start||u.edit_start||u.date;
-      const endStr=personalSched?.edit_end||u.edit_end||u.date;
-      if(!startStr) return;
-
-      const barStart=new Date(Math.max(new Date(startStr),startDate));
-      const barEnd=new Date(Math.min(new Date(endStr),endDate));
-      if(barStart>barEnd) return;
-
-      const barStartStr=`${barStart.getFullYear()}-${pad(barStart.getMonth()+1)}-${pad(barStart.getDate())}`;
-      const barEndStr=`${barEnd.getFullYear()}-${pad(barEnd.getMonth()+1)}-${pad(barEnd.getDate())}`;
-      const left=dateToLeft(barStartStr);
-      const width=dateToLeft(barEndStr)-left+COL;
-      const titleAttr=u.title+(personalSched?` (${personalSched.edit_start||'?'}~${personalSched.edit_end||'?'})`:'');
-
-      html+=`<div style="position:absolute;left:${left}px;top:3px;width:${width}px;height:16px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;cursor:pointer;opacity:.85" title="${titleAttr}" onclick="event.stopPropagation();openEditUpload('${u.id}')">
-        <span style="font-size:9px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${u.savebon?'⭐ ':''}${u.title}</span>
-      </div>`;
-
-      // 주말 스트라이프
-      const days2=Math.round((barEnd-barStart)/(1000*60*60*24))+1;
-      for(let i2=0;i2<days2;i2++){
-        const cur2=new Date(barStart.getTime()+i2*86400000);
-        const dow2=cur2.getDay();
-        if(dow2===0||dow2===6){
-          const dStr=`${cur2.getFullYear()}-${pad(cur2.getMonth()+1)}-${pad(cur2.getDate())}`;
-          html+=`<div style="position:absolute;left:${dateToLeft(dStr)}px;top:3px;width:${COL}px;height:16px;background:rgba(255,255,255,0.45);pointer-events:none;z-index:1"></div>`;
-        }
-      }
-
-      // 업로드일 마커
-      if(u.date){
-        const uDate=new Date(u.date);
-        if(uDate>=startDate&&uDate<=endDate){
-          const uStr=u.date;
-          const uLeft=dateToLeft(uStr)+COL/2-4;
-          html+=`<div style="position:absolute;left:${uLeft}px;top:-2px;font-size:10px;color:${barColor};font-weight:700;z-index:2">▲</div>`;
-        }
-      }
-    });
-
-    html+=`</div></div>`;
-  });
-
-  // 범례
-  html+=`<div style="display:flex;gap:16px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary)">
-    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;background:#B45309;border-radius:2px;display:inline-block"></span>슬기</span>
-    <span style="font-size:10px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;background:#DB2777;border-radius:2px;display:inline-block"></span>소미</span>
-    <span style="font-size:10px;color:var(--color-text-secondary)">▲ 업로드일 &nbsp; ⭐ 세이브본</span>
-  </div>`;
-
-  html+=`</div>`;
-  grid.innerHTML=html;
-
-  // 오늘 날짜로 자동 스크롤 (왼쪽에서 4일 여백)
-  const scrollEl=document.getElementById('timeline-scroll');
-  if(scrollEl&&today>=startDate){
-    const todayStr=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-    const scrollLeft=Math.max(0, dateToLeft(todayStr)-4*COL);
-    setTimeout(()=>scrollEl.scrollLeft=scrollLeft, 50);
-  }
-}
 
 
 // ── 공지 ──
