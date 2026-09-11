@@ -475,6 +475,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="체리시">체리시</option>
       <option value="메이">메이</option>
       <option value="헤이디">헤이디</option>
+      <option value="유키">유키</option>
     </select>
     <label>상태</label>
     <select id="ad-status">
@@ -666,6 +667,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="체리시">체리시</option>
       <option value="메이">메이</option>
       <option value="헤이디">헤이디</option>
+      <option value="유키">유키</option>
     </select>
     <label>🎬 편집/업로드 담당자 <span style="font-weight:400;color:#999">(선택하면 편집 기간 입력 가능)</span></label>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:7px">
@@ -715,6 +717,14 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
           <input type="date" id="es-헤이디" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
           <span style="font-size:11px;color:#888">~</span>
           <input type="date" id="ee-헤이디" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="유키" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 유키</label>
+        <div id="dates-유키" style="display:none;flex:1;gap:6px;align-items:center">
+          <input type="date" id="es-유키" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
+          <span style="font-size:11px;color:#888">~</span>
+          <input type="date" id="ee-유키" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -935,9 +945,10 @@ const MEMBERS = {
   may:    {label:'메이',      color:'#FBB28B'},
   new:    {label:'헤이디',color:'#DBC0E8'},
   maeve:  {label:'메이브',    color:'#B2DD9E'},
+  yuki:   {label:'유키',      color:'#F5C542'},
   team:   {label:'팀 전체',   color:'#3D4D1A'}
 };
-const MEMBER_ORDER = ['jini','eden','jamie','cherish','may','new','maeve'];
+const MEMBER_ORDER = ['jini','eden','jamie','cherish','may','new','maeve','yuki'];
 const statusMap = {
   done:   {label:'업로드 완료', cls:'status-done'},
   review: {label:'검수 중',     cls:'status-review'},
@@ -1172,8 +1183,8 @@ function switchCalView(mode){
 }
 
 // ── 촬영 ──
-const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디','셀프캠'];
-const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','셀프캠':'#8B7355'};
+const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디','유키','셀프캠'];
+const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','유키':'#F5C542','셀프캠':'#8B7355'};
 let _shootPastOpen={somi:false,seulgi:false};
 function toggleShootPast(ch){
   _shootPastOpen[ch]=!_shootPastOpen[ch];
@@ -1430,8 +1441,8 @@ const MEETING_SECTIONS=[
   {key:'somi',  label:'소미', color:'#DB2777', bg:'#FDE8F0', badge:'badge-somi'},
   {key:'etc',   label:'💬 기타', color:'#888', bg:'#F0F0F0'},
 ];
-const MENTION_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
-const MEMBER_COLOR_MAP={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8'};
+const MENTION_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','유키'];
+const MEMBER_COLOR_MAP={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','유키':'#F5C542'};
 let curMentions=[];
 
 // ── 채널 현황 ──
@@ -3455,7 +3466,7 @@ function unlockApp(){
 
 // ── 팀장 전용 통계 ──
 let adminRange='month';
-const ADMIN_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디'];
+const ADMIN_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','유키'];
 
 function openAdminView(){
   document.getElementById('admin-view').style.display='block';
@@ -3501,6 +3512,33 @@ function renderAdminStats(){
   const dateVal=x=>x?new Date(x+'T00:00:00'):null;
   const clampDays=(a,b)=>Math.max(1,Math.round((startOfDay(b)-startOfDay(a))/DAY)+1);
 
+  // 2026년 대한민국 공휴일 (대체공휴일 포함) — 매년 갱신 필요
+  const HOLIDAYS_2026=new Set([
+    '2026-01-01', // 신정
+    '2026-02-16','2026-02-17','2026-02-18', // 설날 연휴
+    '2026-03-01','2026-03-02', // 삼일절 + 대체공휴일
+    '2026-05-05', // 어린이날
+    '2026-05-24','2026-05-25', // 부처님오신날 + 대체공휴일
+    '2026-06-06', // 현충일
+    '2026-08-15','2026-08-17', // 광복절 + 대체공휴일
+    '2026-09-24','2026-09-25','2026-09-26', // 추석 연휴
+    '2026-10-03','2026-10-05', // 개천절 + 대체공휴일
+    '2026-10-09', // 한글날
+    '2026-12-25', // 성탄절
+  ]);
+  const ymd=d=>{const x=startOfDay(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;};
+  // 영업일 계산: 주말(토·일) + 공휴일 제외한 실제 작업 가능일수
+  const workDays=(a,b)=>{
+    let cnt=0;
+    const cur=startOfDay(a), end=startOfDay(b);
+    while(cur<=end){
+      const dow=cur.getDay();
+      if(dow!==0&&dow!==6&&!HOLIDAYS_2026.has(ymd(cur))) cnt++;
+      cur.setDate(cur.getDate()+1);
+    }
+    return Math.max(1,cnt);
+  };
+
   // 기존 데이터에서 담당자별 '업무 수'가 아니라 '업무가 차지하는 기간'까지 반영한 가중 업무량을 계산합니다.
   const stats={};
   ADMIN_MEMBERS.forEach(m=>stats[m]={edit:0,plan:0,active:0,upcoming:0,overdue:0,days:0,weekDays:0,todayTasks:0,short:0,long:0,titles:[],editDurations:[]});
@@ -3519,9 +3557,9 @@ function renderAdminStats(){
       const editEnd=dateVal(ps?.edit_end)||uploadDate;
       if(u.title) st.titles.push({title:u.title,start:editStart,end:editEnd});
       if(editStart&&editEnd){
-        // 실제 편집 기간(일수) 기록 → 평균 계산용 (멤버별 스케줄이 있는 경우만)
+        // 실제 편집 기간(영업일수: 주말·공휴일 제외) 기록 → 평균 계산용
         if(ps?.edit_start&&ps?.edit_end){
-          st.editDurations.push(clampDays(editStart,editEnd));
+          st.editDurations.push(workDays(editStart,editEnd));
         }
         if(editEnd>=today) st.days+=clampDays(editStart,editEnd);
         if(editStart<=today&&editEnd>=today){st.active++;st.todayTasks++;}
@@ -3604,7 +3642,7 @@ function renderAdminStats(){
   // 1-b. 업로드·구성안 건수 + 평균 편집기간 (팀원별 상세)
   html+=`<div style="background:#FFFFFF;border:1px solid #E2E5E9;border-radius:14px;padding:18px;margin-bottom:14px">
     <div style="font-size:14px;font-weight:600;margin-bottom:4px">📋 팀원별 담당 건수 & 평균 편집기간</div>
-    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">편집/업로드 담당·구성안 담당 건수와, 편집 기간이 입력된 건들의 평균 소요일</div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:14px">편집/업로드 담당·구성안 담당 건수와, 편집 기간이 입력된 건들의 평균 소요일 (주말·공휴일 제외 영업일)</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr style="border-bottom:1.5px solid #E2E5E9;color:var(--color-text-secondary);font-size:11px">
         <th style="text-align:left;padding:8px 6px">팀원</th>
@@ -3623,7 +3661,7 @@ function renderAdminStats(){
       <td style="text-align:center;padding:9px 6px;font-weight:600;color:#7A5AA8">${x.plan}</td>
       <td style="text-align:center;padding:9px 6px;color:#6E8B3D">${x.long}</td>
       <td style="text-align:center;padding:9px 6px;color:#C0504D">${x.short}</td>
-      <td style="text-align:center;padding:9px 6px">${avgDur!==null?`<b>${avgDur.toFixed(1)}</b>일 <span style="font-size:9px;color:#aaa">(${x.editDurations.length}건)</span>`:'<span style="color:#ccc">–</span>'}</td>
+      <td style="text-align:center;padding:9px 6px">${avgDur!==null?`<b>${avgDur.toFixed(1)}</b> 영업일 <span style="font-size:9px;color:#aaa">(${x.editDurations.length}건)</span>`:'<span style="color:#ccc">–</span>'}</td>
     </tr>`;
   });
   html+=`</tbody></table></div>
