@@ -531,9 +531,15 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     </div>
     <label>연관 아이템 <span style="font-weight:400;color:#999">(선택 · 미지정 가능)</span></label>
     <select id="mi-linked-upload" style="margin-bottom:12px"></select>
-    <label>내용 <span style="font-weight:400;color:#999">· 굵게는 텍스트 선택 후 ⌘/Ctrl+B</span></label>
-    <div style="display:flex;gap:5px;margin-bottom:6px">
-      <button type="button" class="btn btn-sm" style="width:32px;font-weight:700;padding:4px 0" onclick="miBold()" title="굵게 (Ctrl+B)">B</button>
+    <label>내용 <span style="font-weight:400;color:#999">· 라벨 버튼을 누르면 커서 위치에 삽입 · 굵게는 ⌘/Ctrl+B</span></label>
+    <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap">
+      <button type="button" onclick="miLabel('촬영')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #F5B5B5;background:#fff;color:#D14343;cursor:pointer;font-weight:500">🎬 촬영</button>
+      <button type="button" onclick="miLabel('협조')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #A9CCE8;background:#fff;color:#0C447C;cursor:pointer;font-weight:500">🤝 협조</button>
+      <button type="button" onclick="miLabel('구성')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #C4BEEA;background:#fff;color:#3C3489;cursor:pointer;font-weight:500">💡 구성</button>
+      <button type="button" onclick="miLabel('소품/준비')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #F0C89A;background:#fff;color:#9A6B1E;cursor:pointer;font-weight:500">📦 소품/준비</button>
+      <button type="button" onclick="miLabel('장소')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #A3C7B5;background:#fff;color:#2C7A5B;cursor:pointer;font-weight:500">📍 장소</button>
+      <button type="button" onclick="miLabel('일정')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#666;cursor:pointer;font-weight:500">🕐 일정</button>
+      <button type="button" style="width:30px;font-weight:700;padding:3px 0;font-size:12px;border-radius:6px;border:1px solid #d5d5d5;background:#fff;cursor:pointer" onclick="miBold()" title="굵게 (Ctrl+B)">B</button>
     </div>
     <div id="mi-content" contenteditable="true" onkeydown="miContentKeydown(event)"
       style="min-height:80px;padding:9px 11px;border:0.5px solid var(--color-border-secondary);border-radius:7px;font-size:13px;line-height:1.6;outline:none;background:var(--color-background-primary);color:var(--color-text-primary)"
@@ -963,6 +969,62 @@ function stripHtml(html){
   return tmp.textContent||tmp.innerText||'';
 }
 
+// [촬영] [협조] 등 대괄호 라벨 → 색 배지로 변환
+const MEETING_LABELS={
+  '촬영':{emoji:'🎬',bg:'#FDECEC',c:'#D14343'},
+  '협조':{emoji:'🤝',bg:'#E6F1FB',c:'#0C447C'},
+  '구성':{emoji:'💡',bg:'#EEEDFE',c:'#3C3489'},
+  '소품/준비':{emoji:'📦',bg:'#FEF3E2',c:'#9A6B1E'},
+  '소품':{emoji:'📦',bg:'#FEF3E2',c:'#9A6B1E'},
+  '장소':{emoji:'📍',bg:'#E5F3EC',c:'#2C7A5B'},
+  '일정':{emoji:'🕐',bg:'#F0F0F0',c:'#555'},
+};
+function labelToBadge(html){
+  if(!html) return '';
+  // 1) 대괄호 라벨 → 배지
+  let out=html.replace(/(?:<b>)?\[([^\]]+)\](?:<\/b>)?/g,(m,name)=>{
+    const key=name.trim();
+    const L=MEETING_LABELS[key];
+    if(!L) return m;
+    return `<span style="display:inline-block;font-size:10px;padding:1px 8px;border-radius:4px;background:${L.bg};color:${L.c};font-weight:700;margin:1px 0">${L.emoji} ${key}</span>`;
+  });
+  // 2) URL 자동 링크 (이미 <a>로 감싼 건 제외)
+  out=out.replace(/(https?:\/\/[^\s<]+)/g,(url)=>{
+    // 끝에 붙은 문장부호 제외
+    const m=url.match(/^(.*?)([.,)\]]*)$/);
+    const clean=m[1], trail=m[2]||'';
+    return `<a href="${clean}" target="_blank" rel="noopener" style="color:#2C7A5B;text-decoration:underline;word-break:break-all" onclick="event.stopPropagation()">${clean}</a>${trail}`;
+  });
+  return out;
+}
+
+// 회의 항목 펼침 상태
+let _meetingItemExpanded={};
+function toggleMeetingItemExpand(id){
+  _meetingItemExpanded[id]=!_meetingItemExpanded[id];
+  renderMeetingDetail();
+}
+
+// 회의 항목 → To Do(handovers)로 전송
+async function meetingItemToTodo(id){
+  const it=meetingItemData.find(i=>i.id===id);
+  if(!it) return;
+  const title=stripHtml(it.content).replace(/\s+/g,' ').trim().slice(0,120);
+  if(!title){showToast('내용이 비어 있어요');return;}
+  const mentions=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const memberStr=mentions.length?mentions.join(', '):'미정';
+  // 연결된 업로드가 있으면 채널 추정
+  let channel='';
+  if(it.linked_upload_id){
+    const lu=uploadData.find(u=>u.id===it.linked_upload_id);
+    if(lu) channel=lu.channel;
+  }
+  const payload={title, from_member:memberStr, to_member:memberStr, channel, deadline_date:null, status:'pending', detail:'회의록에서 전송됨'};
+  const{error}=await db.from('handovers').insert(payload);
+  if(error){showToast('전송 실패: '+error.message);return;}
+  showToast('홈 To Do로 보냈어요 ✓');
+}
+
 // D-day 계산: 날짜 문자열 → {label, color, urgent} (오늘 0시 기준)
 function calcDday(dateStr){
   if(!dateStr) return null;
@@ -973,7 +1035,18 @@ function calcDday(dateStr){
   if(diff===0) return {label:'오늘 마감', color:'#A32D2D', urgent:true};
   return {label:`${Math.abs(diff)}일 지남`, color:'#A32D2D', urgent:true, overdue:true};
 }
-function closeModal(id,e){if(!e||e.target===document.getElementById(id))document.getElementById(id).style.display='none';}
+function closeModal(id,e){
+  // 드래그로 텍스트 선택 후 오버레이 위에서 마우스를 떼는 경우 닫히지 않도록,
+  // mousedown이 실제로 오버레이에서 시작됐을 때만 닫는다.
+  if(e){
+    if(e.target!==document.getElementById(id)) return;
+    if(_modalMouseDownTarget!==document.getElementById(id)) return;
+  }
+  document.getElementById(id).style.display='none';
+}
+// 오버레이에서 mousedown이 시작됐는지 추적 (드래그 종료 오탐 방지)
+let _modalMouseDownTarget=null;
+document.addEventListener('mousedown',e=>{ _modalMouseDownTarget=e.target; });
 let _memoDn=false;
 function memoOverlayDown(e){_memoDn=(e.target===document.getElementById('modal-memo'));}
 function memoOverlayUp(e){if(_memoDn&&e.target===document.getElementById('modal-memo'))document.getElementById('modal-memo').style.display='none';_memoDn=false;}
@@ -1424,7 +1497,6 @@ let curMeetingId=null, curMeetingWeek=1;
 const MEETING_SECTIONS=[
   {key:'notice',label:'📢 공지사항', color:'#3D4D1A', bg:'#EEEDFE'},
   {key:'review',label:'🎬 업로드 리뷰', color:'#1D9E75', bg:'#EAF3DE'},
-  {key:'idea',  label:'💡 아이템 논의', color:'#BA7517', bg:'#FAEEDA'},
   {key:'seulgi',label:'슬기', color:'#B45309', bg:'#FFF8E1', badge:'badge-seulgi'},
   {key:'somi',  label:'소미', color:'#DB2777', bg:'#FDE8F0', badge:'badge-somi'},
   {key:'etc',   label:'💬 기타', color:'#888', bg:'#F0F0F0'},
@@ -1606,12 +1678,14 @@ function changeMeetingYear(d){ meetingYear+=d; renderMeeting(); }
 let _migratedMeetings=false;
 async function migrateOldMeetingSections(){
   if(_migratedMeetings) return;
-  const oldItems=meetingItemData.filter(it=>it.section==='issue');
+  // issue(월별 이슈)→notice(공지), idea(아이템 논의)→etc(기타)로 이동
+  const oldItems=meetingItemData.filter(it=>it.section==='issue'||it.section==='idea');
   if(!oldItems.length){ _migratedMeetings=true; return; }
   _migratedMeetings=true;
   for(const it of oldItems){
-    it.section='notice'; // 로컬 즉시 반영
-    await db.from('meeting_items').update({section:'notice'}).eq('id',it.id);
+    const newSec=it.section==='issue'?'notice':'etc';
+    it.section=newSec; // 로컬 즉시 반영
+    await db.from('meeting_items').update({section:newSec}).eq('id',it.id);
   }
 }
 
@@ -1731,20 +1805,35 @@ function renderMeetingDetail(){
         }
       }
       const metaHtml=[linkedTag,mentionsHtml].filter(Boolean).join(' ');
-      const contentHtml=`<span>${it.content}</span>${metaHtml?' '+metaHtml:''}`;
+      const renderedContent=labelToBadge(it.content);
+      const contentHtml=`<span>${renderedContent}</span>${metaHtml?' '+metaHtml:''}`;
+      // 긴 항목(줄바꿈 3개 이상) 접기 판단
+      const brCount=(it.content.match(/<br>/gi)||[]).length;
+      const isLong=brCount>=3;
+      const collapsed=isLong&&!_meetingItemExpanded[it.id];
+      const collapseStyle=collapsed?'max-height:60px;overflow:hidden;position:relative':'';
+      const fadeOverlay=collapsed?`<span style="position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(transparent,var(--color-background-primary))"></span>`:'';
+      const toggleBtn=isLong?`<button onclick="toggleMeetingItemExpand('${it.id}')" style="background:none;border:none;cursor:pointer;color:#2C7A5B;font-size:11px;padding:2px 0;font-weight:500">${collapsed?'▾ 더보기':'▴ 접기'}</button>`:'';
+
       if(it.item_type==='checkbox'){
         html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5;group" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
           <span onclick="toggleMeetingCheck('${it.id}',${!it.checked})" style="width:15px;height:15px;border:1.5px solid ${it.checked?'#1D9E75':'#bbb'};border-radius:4px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${it.checked?'#1D9E75':'transparent'}">${it.checked?'<span style="color:#fff;font-size:10px">✓</span>':''}</span>
-          <span style="flex:1;${it.checked?'text-decoration:line-through;color:var(--color-text-secondary)':''}">${contentHtml}</span>
+          <span style="flex:1;min-width:0;${it.checked?'text-decoration:line-through;color:var(--color-text-secondary)':''}">
+            <span style="display:block;${collapseStyle}">${contentHtml}${fadeOverlay}</span>${toggleBtn}
+          </span>
           <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
+            <button onclick="meetingItemToTodo('${it.id}')" title="To Do로 보내기" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:12px;padding:0 2px">📋</button>
             <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
           </span>
         </div>`;
       } else {
         html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
           <span style="flex-shrink:0;color:var(--color-text-secondary);margin-top:1px">•</span>
-          <span style="flex:1">${contentHtml}</span>
+          <span style="flex:1;min-width:0">
+            <span style="display:block;${collapseStyle}">${contentHtml}${fadeOverlay}</span>${toggleBtn}
+          </span>
           <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
+            <button onclick="meetingItemToTodo('${it.id}')" title="To Do로 보내기" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:12px;padding:0 2px">📋</button>
             <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
           </span>
         </div>`;
@@ -1847,6 +1936,18 @@ function miContentKeydown(e){
     e.preventDefault();
     document.execCommand('bold',false,null);
   }
+}
+
+// 라벨 삽입: 커서 위치에 [라벨] + 줄바꿈. 굵게 처리해서 저장 시 배지로 변환됨
+function miLabel(name){
+  const el=document.getElementById('mi-content');
+  el.focus();
+  // 커서가 줄 중간이 아니면 새 줄에서 시작하도록, 앞에 내용 있으면 줄바꿈 먼저
+  const sel=window.getSelection();
+  const atStart=el.textContent.trim()===''||(sel.anchorNode&&sel.anchorOffset===0&&el.textContent.endsWith('\n'));
+  // <b>[라벨]</b> + 줄바꿈 삽입
+  const htmlToInsert=`<b>[${name}]</b><br>`;
+  document.execCommand('insertHTML',false,htmlToInsert);
 }
 
 function renderMentionChips(){
@@ -2884,7 +2985,7 @@ function runGlobalSearch(q){
     if(plainText.toLowerCase().includes(query)){
       const mt=meetingData.find(m=>m.id===it.meeting_id);
       const when=mt?`${mt.year}.${mt.month}월 ${mt.week}주차`:'';
-      const secLabel={notice:'공지사항',review:'업로드 리뷰',idea:'아이템 논의',seulgi:'슬기',somi:'소미',etc:'기타'}[it.section]||it.section;
+      const secLabel={notice:'공지사항',review:'업로드 리뷰',seulgi:'슬기',somi:'소미',etc:'기타'}[it.section]||it.section;
       results.push({cat:'회의록',catColor:'#3D4D1A',title:plainText,sub:`${when} · ${secLabel}`,page:'meeting',meetingMonth:mt?.month,meetingYear:mt?.year,meetingWeek:mt?.week});
     }
   });
