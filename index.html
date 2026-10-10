@@ -130,6 +130,10 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 [contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:var(--color-text-secondary);opacity:.6}
 [contenteditable] b, [contenteditable] strong{font-weight:700}
 @media(max-width:720px){#admin-view{padding:14px!important}.admin-summary-grid{grid-template-columns:repeat(2,1fr)!important}.admin-two-col{grid-template-columns:1fr!important}}
+.mt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+@media(max-width:720px){.mt-grid{grid-template-columns:1fr}}
+.mt-box a{color:inherit!important}
+.mt-box .it-actions button{color:inherit!important;opacity:.7}
 </style>
 </head>
 <body>
@@ -461,7 +465,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="이든">이든</option>
       <option value="제이미">제이미</option>
       <option value="체리시">체리시</option>
-      <option value="메이">메이</option>
       <option value="헤이디">헤이디</option>
       <option value="유키">유키</option>
     </select>
@@ -621,8 +624,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <select id="ev-member">
       <option value="jini">지니</option><option value="eden">이든</option>
       <option value="jamie">제이미</option><option value="cherish">체리시</option>
-      <option value="may">메이</option><option value="new">헤이디</option>
-      <option value="maeve">메이브</option><option value="team">팀 전체</option>
+      <option value="new">헤이디</option>
+      <option value="team">팀 전체</option>
     </select>
     <label>채널</label>
     <select id="ev-channel">
@@ -659,7 +662,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <option value="이든">이든</option>
       <option value="제이미">제이미</option>
       <option value="체리시">체리시</option>
-      <option value="메이">메이</option>
       <option value="헤이디">헤이디</option>
       <option value="유키">유키</option>
     </select>
@@ -695,14 +697,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
           <input type="date" id="es-체리시" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
           <span style="font-size:11px;color:#888">~</span>
           <input type="date" id="ee-체리시" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;min-width:80px"><input type="checkbox" class="up-member-cb" value="메이" style="width:auto;margin:0" onchange="toggleMemberDates(this)"> 메이</label>
-        <div id="dates-메이" style="display:none;flex:1;gap:6px;align-items:center">
-          <input type="date" id="es-메이" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
-          <span style="font-size:11px;color:#888">~</span>
-          <input type="date" id="ee-메이" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;outline:none">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -873,7 +867,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="이든" style="width:auto;margin:0"> 이든</label>
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="제이미" style="width:auto;margin:0"> 제이미</label>
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="체리시" style="width:auto;margin:0"> 체리시</label>
-      <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="메이" style="width:auto;margin:0"> 메이</label>
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="헤이디" style="width:auto;margin:0"> 헤이디</label>
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" class="hw-member-cb" value="팀 전체" style="width:auto;margin:0"> 팀 전체</label>
     </div>
@@ -943,6 +936,8 @@ const MEMBERS = {
   team:   {label:'팀 전체',   color:'#3D4D1A'}
 };
 const MEMBER_ORDER = ['jini','eden','jamie','cherish','may','new','maeve','yuki'];
+// 홈 팀원 현황에 노출할 멤버 (메이=퇴사, 유키=노출 제외 / 이름은 데이터에 유지)
+const HOME_MEMBERS = ['jini','eden','jamie','cherish','new'];
 const statusMap = {
   done:   {label:'업로드 완료', cls:'status-done'},
   review: {label:'검수 중',     cls:'status-review'},
@@ -993,7 +988,7 @@ function labelToBadge(html){
     // 끝에 붙은 문장부호 제외
     const m=url.match(/^(.*?)([.,)\]]*)$/);
     const clean=m[1], trail=m[2]||'';
-    return `<a href="${clean}" target="_blank" rel="noopener" style="color:#2C7A5B;text-decoration:underline;word-break:break-all" onclick="event.stopPropagation()">${clean}</a>${trail}`;
+    return `<a href="${clean}" target="_blank" rel="noopener" style="color:#2C7A5B;text-decoration:underline;word-break:break-all" onclick="event.stopPropagation()" title="${clean}">${shortUrl(clean)}</a>${trail}`;
   });
   return out;
 }
@@ -1244,7 +1239,7 @@ function switchCalView(mode){
 }
 
 // ── 촬영 ──
-const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','메이','헤이디','유키','셀프캠'];
+const SHOOT_MEMBERS = ['지니','이든','제이미','체리시','헤이디','유키','셀프캠'];
 const SHOOT_MEMBER_COLORS = {'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','유키':'#F5C542','셀프캠':'#8B7355'};
 let _shootPastOpen={somi:false,seulgi:false};
 function toggleShootPast(ch){
@@ -1501,7 +1496,7 @@ const MEETING_SECTIONS=[
   {key:'somi',  label:'소미', color:'#DB2777', bg:'#FDE8F0', badge:'badge-somi'},
   {key:'etc',   label:'💬 기타', color:'#888', bg:'#F0F0F0'},
 ];
-const MENTION_MEMBERS=['지니','이든','제이미','체리시','메이','헤이디','유키'];
+const MENTION_MEMBERS=['지니','이든','제이미','체리시','헤이디','유키'];
 const MEMBER_COLOR_MAP={'지니':'#EA5E86','이든':'#A3C1E2','제이미':'#F76754','체리시':'#47B5A8','메이':'#FBB28B','헤이디':'#DBC0E8','유키':'#F5C542'};
 let curMentions=[];
 
@@ -1744,6 +1739,62 @@ function backToMeetingMonths(){
   renderMeeting();
 }
 
+// ── 회의록 아이템 박스 색상 (참고 팔레트, clover/cherry 제외) ──
+const MEETING_BOX_COLORS=[
+  {bg:'#E6E3F7',fg:'#4A4375'}, // wisteria
+  {bg:'#FED57D',fg:'#6B4A00'}, // butter yellow
+  {bg:'#98C1E9',fg:'#1F3A5C'}, // attic window
+  {bg:'#FDD0D0',fg:'#7A2E2E'}, // ballet slipper
+  {bg:'#9CA362',fg:'#262B10'}, // matcha
+  {bg:'#E7F5F9',fg:'#2C5A66'}, // seafoam
+  {bg:'#F0A351',fg:'#4A2600'}, // apricot jam
+  {bg:'#FCEDED',fg:'#7A3B3B'}, // milk shake
+  {bg:'#B3DFEB',fg:'#1E4B57'}, // rainy day
+  {bg:'#F7F1E8',fg:'#5A4A33'}, // latte
+];
+// 같은 아이템은 주차가 바뀌어도 같은 색이 되도록 id 기반으로 고정
+function meetingBoxColor(id){
+  let h=0; for(const ch of String(id)) h=(h*31+ch.charCodeAt(0))>>>0;
+  return MEETING_BOX_COLORS[h%MEETING_BOX_COLORS.length];
+}
+// 긴 URL은 도메인 위주로 짧게 표시
+function shortUrl(u){
+  try{
+    const x=new URL(u);
+    const host=x.hostname.replace(/^www\./,'');
+    const path=x.pathname.length>1?x.pathname.slice(0,14):'';
+    return host+path+((x.pathname.length>14||x.search)?'…':'');
+  }catch(e){ return u.length>40?u.slice(0,40)+'…':u; }
+}
+// 박스 안 항목 한 줄 렌더
+function renderMeetingItemRow(it,box,isFirst){
+  const mentionsHtml=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean).map(m=>{
+    const c=MEMBER_COLOR_MAP[m]||'#3D4D1A';
+    return `<span style="background:rgba(255,255,255,.65);color:${c};padding:0 5px;border-radius:3px;font-size:11px;font-weight:600;white-space:nowrap">@${m}</span>`;
+  }).join(' ');
+  const contentHtml=`<span>${labelToBadge(it.content)}</span>${mentionsHtml?' '+mentionsHtml:''}`;
+  const brCount=(it.content.match(/<br>/gi)||[]).length;
+  const isLong=brCount>=4;
+  const collapsed=isLong&&!_meetingItemExpanded[it.id];
+  const collapseStyle=collapsed?'max-height:84px;overflow:hidden;position:relative':'';
+  const fade=collapsed?`<span style="position:absolute;left:0;right:0;bottom:0;height:26px;background:linear-gradient(rgba(0,0,0,0),${box.bg})"></span>`:'';
+  const toggleBtn=isLong?`<button onclick="toggleMeetingItemExpand('${it.id}')" style="background:none;border:none;cursor:pointer;color:inherit;font-size:11px;padding:2px 0;font-weight:600;text-decoration:underline">${collapsed?'더보기':'접기'}</button>`:'';
+  const marker=it.item_type==='checkbox'
+    ? `<span onclick="toggleMeetingCheck('${it.id}',${!it.checked})" style="width:14px;height:14px;border:1.5px solid ${box.fg};border-radius:4px;flex-shrink:0;margin-top:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${it.checked?box.fg:'transparent'}">${it.checked?`<span style="color:${box.bg};font-size:10px">✓</span>`:''}</span>`
+    : `<span style="flex-shrink:0;width:5px;height:5px;border-radius:50%;background:${box.fg};margin-top:9px"></span>`;
+  const done=it.item_type==='checkbox'&&it.checked;
+  return `<div style="display:flex;align-items:flex-start;gap:8px;padding:${isFirst?'0':'9px'} 0 0;${isFirst?'':`border-top:1px dashed ${box.fg}40;margin-top:9px;`}font-size:12.5px;line-height:1.6" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
+    ${marker}
+    <span style="flex:1;min-width:0;${done?'text-decoration:line-through;opacity:.6':''}">
+      <span style="display:block;${collapseStyle}">${contentHtml}${fade}</span>${toggleBtn}
+    </span>
+    <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:2px;flex-shrink:0">
+      <button onclick="meetingItemToTodo('${it.id}')" title="To Do로 보내기" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px">📋</button>
+      <button onclick="editMeetingItem('${it.id}')" title="수정" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px">✎</button>
+    </span>
+  </div>`;
+}
+
 function renderMeetingDetail(){
   if(curMeetingMonth===null) return;
   // 이 달의 주차별 회의록
@@ -1787,60 +1838,48 @@ function renderMeetingDetail(){
       : `<span style="font-size:12px;font-weight:600;color:${sec.color}">${sec.label}</span>`;
     html+=`<div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:5px;border-bottom:1.5px solid ${sec.bg}">${headHtml}</div>
-      <div style="display:flex;flex-direction:column;gap:2px">`;
+      <div>`;
 
+    // 아이템(연결된 업로드)별로 묶기 → 아이템 박스 먼저, 미지정은 '기타 메모' 박스로
+    const groups={}; const noItem=[];
     items.forEach(it=>{
-      const mentionsHtml=(it.mentions||'').split(',').map(s=>s.trim()).filter(Boolean).map(m=>{
-        const c=MEMBER_COLOR_MAP[m]||'#3D4D1A';
-        return `<span style="background:${c}22;color:${c};padding:0 5px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap">@${m}</span>`;
-      }).join(' ');
-      // 연결된 아이템(업로드 영상) 태그
-      let linkedTag='';
-      if(it.linked_upload_id){
-        const lu=uploadData.find(u=>u.id===it.linked_upload_id);
-        if(lu){
-          const c=lu.channel==='seulgi'?'#B45309':'#DB2777';
-          const chL=lu.channel==='seulgi'?'슬기':'소미';
-          linkedTag=`<span style="background:${c}18;color:${c};padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;white-space:nowrap">🎬 ${chL}·${lu.title}</span>`;
-        }
-      }
-      const metaHtml=[linkedTag,mentionsHtml].filter(Boolean).join(' ');
-      const renderedContent=labelToBadge(it.content);
-      const contentHtml=`<span>${renderedContent}</span>${metaHtml?' '+metaHtml:''}`;
-      // 긴 항목(줄바꿈 3개 이상) 접기 판단
-      const brCount=(it.content.match(/<br>/gi)||[]).length;
-      const isLong=brCount>=3;
-      const collapsed=isLong&&!_meetingItemExpanded[it.id];
-      const collapseStyle=collapsed?'max-height:60px;overflow:hidden;position:relative':'';
-      const fadeOverlay=collapsed?`<span style="position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(transparent,var(--color-background-primary))"></span>`:'';
-      const toggleBtn=isLong?`<button onclick="toggleMeetingItemExpand('${it.id}')" style="background:none;border:none;cursor:pointer;color:#2C7A5B;font-size:11px;padding:2px 0;font-weight:500">${collapsed?'▾ 더보기':'▴ 접기'}</button>`:'';
-
-      if(it.item_type==='checkbox'){
-        html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5;group" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
-          <span onclick="toggleMeetingCheck('${it.id}',${!it.checked})" style="width:15px;height:15px;border:1.5px solid ${it.checked?'#1D9E75':'#bbb'};border-radius:4px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${it.checked?'#1D9E75':'transparent'}">${it.checked?'<span style="color:#fff;font-size:10px">✓</span>':''}</span>
-          <span style="flex:1;min-width:0;${it.checked?'text-decoration:line-through;color:var(--color-text-secondary)':''}">
-            <span style="display:block;${collapseStyle}">${contentHtml}${fadeOverlay}</span>${toggleBtn}
-          </span>
-          <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
-            <button onclick="meetingItemToTodo('${it.id}')" title="To Do로 보내기" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:12px;padding:0 2px">📋</button>
-            <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
-          </span>
-        </div>`;
-      } else {
-        html+=`<div style="display:flex;align-items:flex-start;gap:7px;padding:3px 0;font-size:13px;line-height:1.5" onmouseover="this.querySelector('.it-actions').style.opacity=1" onmouseout="this.querySelector('.it-actions').style.opacity=0">
-          <span style="flex-shrink:0;color:var(--color-text-secondary);margin-top:1px">•</span>
-          <span style="flex:1;min-width:0">
-            <span style="display:block;${collapseStyle}">${contentHtml}${fadeOverlay}</span>${toggleBtn}
-          </span>
-          <span class="it-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;flex-shrink:0">
-            <button onclick="meetingItemToTodo('${it.id}')" title="To Do로 보내기" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:12px;padding:0 2px">📋</button>
-            <button onclick="editMeetingItem('${it.id}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:0 2px">✎</button>
-          </span>
-        </div>`;
-      }
+      const lu=it.linked_upload_id&&uploadData.find(u=>u.id===it.linked_upload_id);
+      if(lu){ (groups[lu.id]=groups[lu.id]||{u:lu,list:[]}).list.push(it); }
+      else noItem.push(it);
     });
+    const groupArr=Object.values(groups).sort((a,b)=>new Date(a.u.date||'2099')-new Date(b.u.date||'2099'));
+    if(groupArr.length||noItem.length){
+      html+=`<div class="mt-grid">`;
+      groupArr.forEach(g=>{
+        const box=meetingBoxColor(g.u.id);
+        const st=statusMap[g.u.status]?.label||'';
+        const dt=g.u.date?g.u.date.slice(5).replace('-','/'):'';
+        const typeL=g.u.video_type==='short'?' · 쇼츠':'';
+        html+=`<div class="mt-box" style="background:${box.bg};color:${box.fg};border-radius:8px;padding:14px 14px 10px;border:0.5px solid rgba(0,0,0,.06)">
+          <div onclick="openEditUpload('${g.u.id}')" style="cursor:pointer;text-align:center">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.3px">${g.u.title}</div>
+            <div style="font-size:10.5px;opacity:.75;margin-top:2px">${dt} 업로드${st?' · '+st:''}${typeL}</div>
+          </div>
+          <div style="border-top:1px solid ${box.fg}55;margin:9px 0 10px"></div>
+          ${g.list.map((it,i)=>renderMeetingItemRow(it,box,i===0)).join('')}
+          <button onclick="openAddMeetingItem('${meeting.id}','${sec.key}','${g.u.id}')" style="display:block;margin-top:8px;background:none;border:none;cursor:pointer;color:inherit;opacity:.65;font-size:11px;padding:2px 0">+ 이 아이템에 추가</button>
+        </div>`;
+      });
+      if(noItem.length){
+        const box={bg:'#F4F4F2',fg:'#4A4A45'};
+        html+=`<div class="mt-box" style="background:${box.bg};color:${box.fg};border-radius:8px;padding:14px 14px 10px;border:0.5px dashed rgba(0,0,0,.15)">
+          <div style="text-align:center">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.3px">기타 메모</div>
+            <div style="font-size:10.5px;opacity:.75;margin-top:2px">아이템 미지정</div>
+          </div>
+          <div style="border-top:1px solid ${box.fg}40;margin:9px 0 10px"></div>
+          ${noItem.map((it,i)=>renderMeetingItemRow(it,box,i===0)).join('')}
+        </div>`;
+      }
+      html+=`</div>`;
+    }
 
-    html+=`<button onclick="openAddMeetingItem('${meeting.id}','${sec.key}')" style="align-self:flex-start;background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:4px 0;margin-top:2px">+ 항목 추가</button>`;
+    html+=`<button onclick="openAddMeetingItem('${meeting.id}','${sec.key}')" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:11px;padding:4px 0;margin-top:8px">+ 항목 추가</button>`;
     html+=`</div></div>`;
   });
 
@@ -1895,14 +1934,14 @@ function fillMeetingUploadOptions(selectedId){
   sel.innerHTML=opts.join('');
 }
 
-function openAddMeetingItem(meetingId,section){
+function openAddMeetingItem(meetingId,section,presetUploadId){
   document.getElementById('mi-modal-title').textContent='항목 추가';
   document.getElementById('mi-edit-id').value='';
   document.getElementById('mi-meeting-id').value=meetingId;
   document.getElementById('mi-section').value=section;
   document.querySelector('input[name="mi-type"][value="bullet"]').checked=true;
   document.getElementById('mi-content').innerHTML='';
-  fillMeetingUploadOptions('');
+  fillMeetingUploadOptions(presetUploadId||'');
   curMentions=[];
   renderMentionChips();
   document.getElementById('mi-delete-btn').style.display='none';
@@ -2824,7 +2863,7 @@ function renderHome(){
     });
   });
 
-  document.getElementById('member-tasks').innerHTML=MEMBER_ORDER.map(mid=>{
+  document.getElementById('member-tasks').innerHTML=HOME_MEMBERS.map(mid=>{
     const m=MEMBERS[mid];
     const uTasks=uploadTaskMap[mid]||[];
     const eTasks=memberExtraTasks[mid]||[];
